@@ -1,0 +1,2296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="color-scheme" content="dark light">
+    <title>K-POP LINE DISTRIBUTION</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@900&family=Poppins:wght@700;900&family=Roboto:wght@700;900&family=League+Spartan:wght@900&family=Gothic+A1:wght@900&family=Inter:wght@700;900&family=DM+Sans:wght@700;900&family=Nunito:wght@800;900&family=Outfit:wght@700;900&family=Barlow:wght@700;900&family=Oswald:wght@700&family=Rajdhani:wght@700&family=Exo+2:wght@700;900&family=Jost:wght@700;900&family=Space+Grotesk:wght@700&family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@700;800&family=Space+Mono:wght@700&family=JetBrains+Mono:wght@700;800&family=Fira+Code:wght@700&family=Source+Code+Pro:wght@700;900&family=IBM+Plex+Mono:wght@700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/metropolis-2" rel="stylesheet">
+    <style>
+        @font-face { font-family: 'Helvetica World'; src: local('Helvetica'), local('Helvetica Neue'), local('HelveticaNeue'), local('Arial'); font-weight: 700; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div id="bg-video-container">
+        <div class="video-overlay"></div>
+        <video id="bg-video" loop playsinline></video>
+    </div>
+    
+    <audio id="bg-audio" loop></audio>
+
+    <div id="app" class="hidden">
+        
+        <div class="main-content-area">
+            <input type="text" id="title-input" value="SONG TITLE HERE" spellcheck="false" style="display:none;">
+
+            <div id="main-spacer" style="flex: 1; min-height: 10px;"></div>
+
+            <div id="timeline-wrapper" class="timeline-hidden">
+                <div id="timeline-toolbar">
+                    <div id="timeline-timer">0:00.00</div>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="v-btn" style="width: 70px; color:#adff2f;" onclick="saveCurrentTimeline()">SAVE TL</button>
+                        <button class="v-btn" style="width: 70px; color:#ff4444;" onclick="clearTimeline()">CLEAR ALL</button>
+                    </div>
+                </div>
+                <div id="tl-viewport">
+                    <div id="tl-content" onmousedown="handleTimelineClicks(event)">
+                        <div id="track-list"></div>
+                        <div id="playhead"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEWPORT (BARS) CONTAINER - FULLY RESPONSIVE -->
+            <div id="viewport-container">
+                <div id="viewport"></div>
+            </div>
+        </div>
+
+        <!-- SDV (pie chart) — fixed panel on the right half of the screen, toggled via DISPLAY SDV -->
+        <div id="chart-container-wrap" class="sdv-hidden">
+            <canvas id="distributionChart"></canvas>
+        </div>
+
+
+        <div class="dock" id="main-dock">
+            <!-- Thin visible tab on the top edge -->
+            <div class="dock-tab" title="Controls">
+                <div class="dock-tab-icon"></div>
+                <div class="dock-tab-icon"></div>
+                <div class="dock-tab-icon"></div>
+            </div>
+
+            <!-- Expandable inner panel -->
+            <div class="dock-inner">
+                <div class="dock-section-label">PLAYBACK</div>
+                <div id="video-manual-bar" style="display:none; flex-direction:column; gap:4px; width:160px;">
+                    <div style="display:flex;gap:4px;">
+                        <button class="v-btn" style="flex:1;max-width:none;" onclick="skipVid(-10)">-10s</button>
+                        <button class="v-btn" style="flex:1;max-width:none;" onclick="skipVid(-5)">-5s</button>
+                    </div>
+                    <div style="display:flex;gap:4px;">
+                        <button class="v-btn" id="m-play-btn" style="flex:1;max-width:none;" onclick="playVid()">PLAY</button>
+                        <button class="v-btn" id="m-stop-btn" style="flex:1;max-width:none;" onclick="stopVid()">STOP</button>
+                    </div>
+                    <div style="display:flex;gap:4px;">
+                        <button class="v-btn" style="flex:1;max-width:none;" onclick="skipVid(5)">+5s</button>
+                        <button class="v-btn" style="flex:1;max-width:none;" onclick="skipVid(10)">+10s</button>
+                    </div>
+                </div>
+                <button class="btn" id="vid-btn" onclick="triggerVideo(event)">MP4</button>
+                <button class="btn" id="aud-btn" onclick="triggerAudio(event)">MP3</button>
+
+                <div class="dock-section-label">CONTROLS</div>
+                <button class="btn btn-toggle-on" id="sort-btn" onclick="toggleSort(event)">SORT: ON</button>
+                <button class="btn" onclick="resetTimers(event)">RESET</button>
+                <button class="btn" onclick="wipeAll(event)" style="color:#ff4444;">REWORK</button>
+
+                <div class="dock-section-label">DISPLAY</div>
+                <button class="btn" id="max-btn" onclick="toggleMax(event)">MAX: 0.0</button>
+                <button class="btn" id="sdv-toggle-btn" onclick="toggleSDV(event)">DISPLAY SDV</button>
+                <button class="btn" id="font-btn" onclick="openFonts(event)">FONTS</button>
+                <div id="theme-dropdown-wrap" style="position:relative; width:130px;">
+                    <button class="btn" id="theme-btn" onclick="toggleThemeDropdown(event)" style="width:100%; display:flex; justify-content:space-between; align-items:center; padding-right:8px;">
+                        <span id="theme-btn-label">◑ DARK</span><span id="theme-btn-arrow" style="font-size:7px; opacity:0.5;">▼</span>
+                    </button>
+                    <div id="theme-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); right:0; width:160px; background:var(--bg3); border:1px solid var(--border2); border-radius:6px; overflow:hidden; z-index:9999; box-shadow:0 4px 16px rgba(0,0,0,0.5);">
+                        <div class="theme-opt" data-theme="dark"      onclick="selectTheme('dark')"     >◑ DARK</div>
+                        <div class="theme-opt" data-theme="light"     onclick="selectTheme('light')"    >☀ LIGHT</div>
+                        <div class="theme-opt" data-theme="midnight"  onclick="selectTheme('midnight')" >★ MIDNIGHT</div>
+                        <div class="theme-opt" data-theme="rose"      onclick="selectTheme('rose')"     >✿ ROSE</div>
+                        <div class="theme-opt" data-theme="amber"     onclick="selectTheme('amber')"    >◈ AMBER</div>
+                        <div class="theme-opt" data-theme="forest"    onclick="selectTheme('forest')"   >❋ FOREST</div>
+                        <div class="theme-opt" data-theme="slate"     onclick="selectTheme('slate')"    >◆ SLATE</div>
+                        <div class="theme-opt" data-theme="cherry"    onclick="selectTheme('cherry')"   >♦ CHERRY</div>
+                    </div>
+                </div>
+
+                <div class="dock-section-label">SIZE</div>
+                <div class="size-control-container">
+                    <span>LINE SIZE</span>
+                    <input type="range" id="sizeSlider" class="size-slider" min="20" max="80" value="80" oninput="updateLineSizes(this.value)">
+                </div>
+
+                <div class="dock-section-label">PANELS</div>
+                <button class="btn" id="tl-toggle-btn" onclick="toggleTimelineUI(event)" style="border-color:#555;">TIMELINE</button>
+                <button class="btn" id="vocal-panel-toggle-btn" onclick="toggleVocalPanels(event)" style="border-color:#555;">TAP PANELS</button>
+                <button class="btn" id="adlib-panel-toggle-btn" onclick="toggleAdlibPanels(event)" style="border-color:#ffe600;color:#ffe600;">AD-LIB PANEL</button>
+                <button class="btn" id="two-col-toggle-btn" onclick="toggleTwoColumn(event)" style="border-color:#555;">2-COLUMN</button>
+
+                <div class="dock-section-label">SAVE</div>
+                <button class="btn" id="save-btn" onclick="openSaveManager(event)" style="color:var(--accent);border-color:var(--accent);">SAVE / LOAD</button>
+
+                <div id="vocal-tap-panels-container" class="hidden"></div>
+                <div id="adlib-tap-panels-container" class="hidden"></div>
+                <input type="file" id="video-upload" accept="video/*" style="display:none;" onchange="handleVideo(this)">
+                <input type="file" id="audio-upload" accept="audio/*" style="display:none;" onchange="handleAudio(this)">
+            </div>
+        </div>
+    </div>
+
+    <div id="setup" class="overlay">
+        <div style="width:100%; max-width:520px; display:flex; flex-direction:column; align-items:center; padding: 0 16px; box-sizing:border-box;">
+            <h1 style="letter-spacing:3px; color:var(--accent); font-size:20px; margin:24px 0 6px 0;">LINE DISTRIBUTION</h1>
+            <p style="font-size:9px; color:var(--text4); letter-spacing:2px; margin:0 0 20px 0;">SETUP</p>
+
+            <!-- Saved presets -->
+            <div id="presets-container" style="width:100%; margin-bottom:16px; display:none;">
+                <div id="presets-toggle-bar" onclick="togglePresetDropdown()" style="background:var(--bg3); border:1px solid var(--border2); padding:12px 16px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:10px; color:var(--accent); letter-spacing:1px;">LOAD SAVED PRESETS</span>
+                    <span id="preset-arrow" style="font-size:8px; color:var(--text4); transition:transform 0.2s;">▼</span>
+                </div>
+                <div id="preset-dropdown-content" class="hidden" style="margin-top:5px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; max-height:180px; overflow-y:auto;">
+                    <div id="setup-preset-list" style="display:flex; flex-direction:column; gap:2px; padding:5px;"></div>
+                </div>
+            </div>
+
+            <div style="font-size:9px; color:var(--text4); letter-spacing:2px; margin-bottom:12px;">OR START NEW</div>
+
+            <!-- Member list builder -->
+            <div id="member-builder" style="width:100%; display:flex; flex-direction:column; gap:6px; max-height:52vh; overflow-y:auto; padding-right:4px; box-sizing:border-box;"></div>
+
+            <!-- Add / Remove row -->
+            <div style="display:flex; gap:8px; margin-top:12px; width:100%;">
+                <button onclick="addMemberRow()" style="flex:1; background:var(--bg3); border:1px solid var(--accent); color:var(--accent); padding:10px; border-radius:5px; font-size:11px; font-weight:900; letter-spacing:1px; cursor:pointer;">+ ADD MEMBER</button>
+                <button onclick="removeMemberRow()" style="flex:1; background:var(--bg3); border:1px solid var(--border2); color:var(--text3); padding:10px; border-radius:5px; font-size:11px; font-weight:900; letter-spacing:1px; cursor:pointer;">− REMOVE</button>
+            </div>
+            <p style="font-size:8px; color:var(--text4); letter-spacing:1px; margin:8px 0 0; text-align:center;">TAP THE KEY BUTTON THEN PRESS ANY KEY TO BIND IT</p>
+            <button class="go" onclick="startEngine()" style="margin-top:10px; cursor:pointer;">START ENGINE</button>
+        </div>
+    </div>
+
+<style>
+  /* RESPONSIVE SYSTEM CSS */
+/* All text uses normal letter-spacing — overrides every inline letter-spacing in the markup/JS templates too. */
+* { letter-spacing: normal !important; }
+:root {
+    --app-width: 100%;
+    --max-ui-width: 860px;
+    /* DARK (default) */
+    --bg: #000; --bg2: #0a0a0a; --bg3: #111; --bg4: #161616;
+    --border: #2a2a2a; --border2: #333;
+    --text: #fff; --text2: rgba(255,255,255,0.75); --text3: #aaa; --text4: #555;
+    --dock-bg: rgba(0,0,0,0.88); --overlay-bg: #000;
+    --input-bg: #111; --btn-bg: #111;
+    --title-bg: rgba(255,255,255,0.05); --bar-bg: rgba(255,255,255,0.05);
+    --accent: #adff2f;
+}
+/* LIGHT */
+body[data-theme="light"] {
+    --bg: #f0f0f0; --bg2: #e8e8e8; --bg3: #f7f7f7; --bg4: #ececec;
+    --border: #ccc; --border2: #bbb;
+    --text: #111; --text2: rgba(0,0,0,0.8); --text3: #444; --text4: #888;
+    --dock-bg: rgba(230,230,230,0.96); --overlay-bg: #f0f0f0;
+    --input-bg: #fff; --btn-bg: #e8e8e8;
+    --title-bg: rgba(0,0,0,0.05); --bar-bg: rgba(0,0,0,0.07);
+    --accent: #5a9e00;
+}
+/* MIDNIGHT */
+body[data-theme="midnight"] {
+    --bg: #050917; --bg2: #080e20; --bg3: #0d1530; --bg4: #111b3a;
+    --border: #1a2a50; --border2: #223060;
+    --text: #e8f0ff; --text2: rgba(200,218,255,0.78); --text3: #7a9acc; --text4: #3a5080;
+    --dock-bg: rgba(5,9,23,0.92); --overlay-bg: #050917;
+    --input-bg: #0d1530; --btn-bg: #0d1530;
+    --title-bg: rgba(100,150,255,0.06); --bar-bg: rgba(100,150,255,0.07);
+    --accent: #00e5ff;
+}
+/* ROSE */
+body[data-theme="rose"] {
+    --bg: #100008; --bg2: #160010; --bg3: #1e0018; --bg4: #260020;
+    --border: #3a0030; --border2: #4a0040;
+    --text: #ffe8f5; --text2: rgba(255,210,240,0.78); --text3: #c070a0; --text4: #703060;
+    --dock-bg: rgba(16,0,8,0.92); --overlay-bg: #100008;
+    --input-bg: #1e0018; --btn-bg: #1e0018;
+    --title-bg: rgba(255,80,160,0.06); --bar-bg: rgba(255,80,160,0.07);
+    --accent: #ff5fad;
+}
+/* AMBER */
+body[data-theme="amber"] {
+    --bg: #0d0800; --bg2: #120b00; --bg3: #1a1000; --bg4: #211500;
+    --border: #332200; --border2: #442d00;
+    --text: #fff5e0; --text2: rgba(255,238,200,0.78); --text3: #c09050; --text4: #6a5020;
+    --dock-bg: rgba(13,8,0,0.92); --overlay-bg: #0d0800;
+    --input-bg: #1a1000; --btn-bg: #1a1000;
+    --title-bg: rgba(255,165,0,0.06); --bar-bg: rgba(255,165,0,0.07);
+    --accent: #ffaa00;
+}
+/* FOREST */
+body[data-theme="forest"] {
+    --bg: #010d03; --bg2: #021205; --bg3: #031a08; --bg4: #05200a;
+    --border: #0a3010; --border2: #0e3e16;
+    --text: #e8ffe0; --text2: rgba(200,255,185,0.78); --text3: #70b870; --text4: #2e6030;
+    --dock-bg: rgba(1,13,3,0.92); --overlay-bg: #010d03;
+    --input-bg: #031a08; --btn-bg: #031a08;
+    --title-bg: rgba(80,200,60,0.06); --bar-bg: rgba(80,200,60,0.07);
+    --accent: #39ff14;
+}
+/* SLATE */
+body[data-theme="slate"] {
+    --bg: #0a0a12; --bg2: #10101c; --bg3: #161622; --bg4: #1c1c2a;
+    --border: #28283c; --border2: #333348;
+    --text: #e8e8ff; --text2: rgba(210,210,255,0.78); --text3: #8888bb; --text4: #444468;
+    --dock-bg: rgba(10,10,18,0.92); --overlay-bg: #0a0a12;
+    --input-bg: #161622; --btn-bg: #161622;
+    --title-bg: rgba(140,100,255,0.06); --bar-bg: rgba(140,100,255,0.07);
+    --accent: #a78bfa;
+}
+/* CHERRY */
+body[data-theme="cherry"] {
+    --bg: #0e0000; --bg2: #150000; --bg3: #1c0000; --bg4: #230000;
+    --border: #350000; --border2: #440000;
+    --text: #ffe8e8; --text2: rgba(255,210,210,0.78); --text3: #c06060; --text4: #6a2020;
+    --dock-bg: rgba(14,0,0,0.92); --overlay-bg: #0e0000;
+    --input-bg: #1c0000; --btn-bg: #1c0000;
+    --title-bg: rgba(220,30,30,0.07); --bar-bg: rgba(220,30,30,0.07);
+    --accent: #ff3333;
+}
+
+body {
+    background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; font-weight: 900;
+    margin: 0; height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column;
+    text-transform: uppercase; -webkit-tap-highlight-color: transparent;
+    transition: background 0.25s, color 0.25s;
+}
+
+#bg-video-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1; overflow: hidden; display: none;
+}
+#bg-video-container video { width: 100%; height: 100%; object-fit: cover; }
+.video-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.3); z-index: 1; }
+
+#app { display: flex; flex-direction: row; height: 100vh; height: 100dvh; width: 100%; overflow: hidden; }
+/* Line distribution (title + chart + bars) is confined to the left 50% of the screen.
+   box-sizing: border-box means the padding below is INSIDE that 50%, not added on top of it. */
+.main-content-area {
+    flex: 0 0 50%; width: 50%; max-width: 50%; min-width: 0;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-sizing: border-box; padding: 42px 16px 0;
+}
+
+#title-input { display: none; }
+
+
+/* SDV (pie chart) lives in the right half of the screen, separate from the line-distribution column on the left.
+   It's a fixed overlay panel so it doesn't compete with the bars for space; toggled on/off via .sdv-hidden. */
+#chart-container-wrap {
+    position: fixed;
+    top: 42px; right: 0;
+    width: 50%; height: calc(100% - 42px);
+    display: flex; justify-content: center; align-items: center;
+    box-sizing: border-box; padding: 40px;
+    overflow: hidden;
+    z-index: 50;
+    pointer-events: none; /* clicks pass through to whatever's beneath; chart itself is decorative */
+    opacity: 1;
+    transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#distributionChart { max-height: 100% !important; max-width: 100% !important; }
+#chart-container-wrap.sdv-hidden { opacity: 0; transform: scale(0.92); pointer-events: none; }
+#main-spacer.sdv-collapsed { flex: 0 !important; min-height: 0 !important; }
+#viewport-container.sdv-centered { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+/* FIX: Responsive Bars */
+#viewport-container { 
+    width: 100%; flex-shrink: 0; display: flex; justify-content: flex-start; box-sizing: border-box; 
+    padding: 0; overflow-y: visible; overflow-x: visible; min-height: 0; margin-bottom: 10px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.5s cubic-bezier(0.4, 0, 0.2, 1), top 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#viewport { 
+    width: 100%; 
+    max-width: 100%; 
+    position: relative; 
+    overflow: visible; 
+}
+
+/* TWO-COLUMN MODE — breaks the member viewport out of the 50%-wide left column so it spans the
+   full screen width, pinned to the bottom of the screen. The panel's height/top are set inline via
+   JS (see _applyTwoColPanelHeight) so the space it occupies scales with the line-size slider rather
+   than always claiming a fixed half of the screen. Members split into a left column (first half)
+   and a right column (second half); see JS layout math in the render loop. */
+#viewport-container.two-col-active {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: 50%; height: 50%; /* fallback only — JS overrides these inline based on line size */
+    width: 100%;
+    z-index: 900;
+    background: var(--bg);
+    box-sizing: border-box;
+    padding: 16px 24px;
+    margin-bottom: 0;
+    border-top: 1px solid var(--border);
+    overflow-y: auto; overflow-x: hidden;
+    display: block;
+    /* Scrolling stays functional for the rare case where the height cap kicks in (see
+       _applyTwoColPanelHeight), but the scrollbar itself stays invisible — cross-browser. */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* legacy Edge/IE */
+}
+#viewport-container.two-col-active::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, newer Edge */
+    width: 0; height: 0;
+}
+#viewport-container.two-col-active #viewport {
+    max-width: var(--max-ui-width);
+    margin: 0 auto;
+}
+
+.member-row {
+    position: absolute; width: 100%; height: var(--row-height); 
+    display: flex; align-items: center; padding: 0 10px; 
+    transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box; will-change: transform, z-index; 
+    touch-action: none; user-select: none; overflow: visible;
+}
+
+/* In two-column mode each row is half-width; JS sets the transform's X offset for the right column */
+#viewport.two-col-mode .member-row {
+    width: calc(50% - 10px);
+}
+
+.active { z-index: 100 !important; }
+.is-muted { opacity: 0.4 !important; }
+
+.avatar-wrap { position: relative; flex-shrink: 0; pointer-events: none; transition: width 0.2s, height 0.2s, opacity 0.2s; overflow: visible; }
+.m-avatar {
+    width: calc(var(--row-height) * 0.87); height: calc(var(--row-height) * 0.87); border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2); background: #222; 
+    transition: border 0.3s, box-shadow 0.3s, transform 0.3s; background-size: cover; background-position: center 15%;
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6); 
+}
+.avatar-wrap { margin-right: calc(var(--row-height) * 0.2); }
+
+.active .m-avatar { 
+    border: 2px solid #fff; 
+    box-shadow: 0 0 12px 4px var(--m-color);
+    transform: scale(1.08); 
+}
+
+.mic-icon {
+    position: absolute; bottom: -10px; right: -15px; font-size: calc(var(--row-height) * 0.26); line-height: 1; z-index: 110;
+    filter: drop-shadow(0 0 5px #000); padding: 12px; pointer-events: auto; 
+    transition: opacity 0.4s ease; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+
+/* Hide mute icon when member row is active */
+.active .mic-icon .custom-mute-icon { opacity: 0; pointer-events: none; }
+.mic-icon .custom-mute-icon { transition: opacity 0.3s ease; }
+
+.custom-mute-icon { width: 14px; height: 14px; background: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 5px rgba(0,0,0,1); }
+.custom-mute-line { width: 8.5px; height: 3px; background: #000; border-radius: 1px; }
+
+.content-wrap { flex: 1; display: flex; flex-direction: column; position: relative; height: var(--row-height); justify-content: center; pointer-events: none; overflow: visible; }
+.label-group { display: flex; flex-direction: column; position: relative; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); transform: translateY(0); will-change: transform; }
+.has-data .label-group { transform: translateY(calc(var(--row-height) * -0.15)); }
+
+.label-row { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+
+.m-pos { display: none; }
+.pos-once {}
+
+.m-name, .time-display { 
+    font-size: calc(var(--row-height) * 0.22); 
+    letter-spacing: 1px; 
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    position: relative;
+    color: var(--text2);
+    transition: color 0.35s ease, text-shadow 0.35s ease;
+}
+.time-display { font-variant-numeric: tabular-nums; display: flex; align-items: baseline; opacity: 0; text-align: left; margin-left: 10px; flex-shrink: 0; white-space: nowrap; }
+.has-data .time-display { opacity: 1; }
+.time-display span[id^="box-"] { display: inline-block; min-width: 5ch; text-align: right; font-variant-numeric: tabular-nums; transition: margin-right 0.4s cubic-bezier(0.16,1,0.3,1); }
+/* Percentage has zero footprint while hidden, so the timer sits flush at the far right (the percentage's usual spot).
+   Revealing it grows its width + gives the timer breathing room via margin-right on the timer — both animate together,
+   so the timer visibly slides left as the percentage grows in, and slides back right when it's hidden again. */
+.m-pct { font-size: calc(var(--row-height) * 0.18); opacity: 0; display: inline-block; width: 0; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap; transition: opacity 0.35s ease, width 0.4s cubic-bezier(0.16,1,0.3,1); }
+.m-pct.pct-revealed { opacity: 0.6; width: 6ch; }
+.time-display span[id^="box-"].pct-make-room { margin-right: 14px; }
+
+
+.m-name, .time-display { transition: color 0.35s ease, text-shadow 0.35s ease; }
+.active .m-name, .active .time-display { color: #fff; text-shadow: 0 0 14px var(--m-color), 0 0 28px var(--m-color), 0 2px 5px #000; }
+
+
+
+.bar-bg { width: 100%; height: calc(var(--row-height) * 0.18); background: var(--bar-bg); position: absolute; bottom: calc(var(--row-height) * 0.16); opacity: 0; transition: opacity 0.6s ease; border-radius: 10px; }
+.has-data .bar-bg { opacity: 1; }
+
+.bar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 0 5px 5px 0; width: 0%; z-index: 1; transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 2px 0 10px rgba(0,0,0,0.4); }
+.bar-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 0 5px 5px 0; z-index: -1; opacity: 0; transition: opacity 1s ease; filter: blur(5px); background: linear-gradient(90deg, var(--m-color), #ffffff, var(--m-color)); background-size: 200% 100%; animation: holo-flow 2s infinite linear; }
+.active .bar-fill::after { opacity: 0.9; }
+@keyframes holo-flow { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+
+.overlay { position: fixed; inset: 0; background: var(--overlay-bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background 0.25s; }
+.setup-input { background: var(--input-bg); border: 1px solid var(--border2); color: var(--text); padding: 10px; border-radius: 4px; font-weight: 900; font-size: 11px; margin: 3px 0; outline: none; }
+.go { background: var(--accent); color: #000; padding: 16px; width: 250px; border: none; font-weight: 900; margin-top: 12px; border-radius: 4px; cursor: pointer; }
+.hidden { display: none !important; }
+
+.dock { position: relative; width: 100%; padding: 8px 12px; background: var(--dock-bg); display: flex; flex-direction: column; gap: 5px; border-top: 1px solid var(--border); box-sizing: border-box; z-index: 1000; flex-shrink: 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); transition: background 0.25s; }
+.dock-row { display: flex; gap: 5px; width: 100%; max-width: var(--max-ui-width); margin: 0 auto; }
+.btn { flex: 1; padding: 10px 4px; background: var(--btn-bg); color: var(--text); border: 1px solid var(--border2); font-size: 9px; border-radius: 5px; font-weight: 900; text-align: center; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+.btn-toggle-on { border-color: var(--accent) !important; color: var(--accent) !important; }
+
+.size-control-container { display: flex; align-items: center; background: var(--btn-bg); border: 1px solid var(--border); padding: 6px 14px; border-radius: 5px; gap: 12px; width: 100%; max-width: var(--max-ui-width); margin: 0 auto; box-sizing: border-box; }
+.size-control-container span { font-size: 9px; color: var(--accent); letter-spacing: 1px; white-space: nowrap; }
+.size-slider { flex: 1; accent-color: var(--accent); cursor: pointer; height: 6px; }
+
+.photo-btn { background: var(--bg4); border: 1px solid var(--border2); color: var(--accent); font-size: 10px; padding: 6px; border-radius: 4px; cursor: pointer; text-align: center; margin-top: 2px; }
+
+.vid-controls { position: relative; width: 100%; padding: 4px 8px; background: var(--dock-bg); display: none; gap: 4px; border-top: 1px solid var(--border); box-sizing: border-box; z-index: 999; justify-content: center; flex-shrink: 0; }
+.v-btn { flex: 1; max-width: 70px; padding: 6px 0; background: var(--bg4); color: var(--text3); border: 1px solid var(--border); font-size: 8px; border-radius: 4px; font-weight: 900; text-align: center; cursor: pointer; }
+.v-btn:active { background: var(--bg3); }
+.v-play-active { color: var(--accent) !important; border-color: var(--accent) !important; }
+
+/* ── TOP PANEL (hover-to-reveal) ─────────────────────────────── */
+.dock {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    width: 100%;
+    height: 42px; /* collapsed tab height */
+    max-height: 80vh;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    pointer-events: auto;
+    transition: height 0.28s cubic-bezier(0.16,1,0.3,1);
+    overflow: visible;
+}
+.dock:hover, .dock.dock-open {
+    height: min(420px, 80vh);
+}
+
+/* Thin visible tab on the bottom edge of the panel */
+.dock-tab {
+    height: 42px;
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background: var(--dock-bg);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    gap: 6px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    z-index: 2;
+}
+.dock-tab-icon {
+    width: 3px; height: 18px;
+    background: var(--text4);
+    border-radius: 2px;
+    transition: background 0.2s;
+}
+.dock:hover .dock-tab-icon, .dock.dock-open .dock-tab-icon { background: var(--accent); }
+
+/* Scrollable inner panel */
+.dock-inner {
+    flex: 1;
+    min-height: 0;
+    background: var(--dock-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-width: var(--max-ui-width);
+    margin: 0 auto;
+    /* Hidden until hover */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease 0.05s;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+}
+.dock:hover .dock-inner, .dock.dock-open .dock-inner {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
+.dock-row { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.btn {
+    width: auto; padding: 9px 12px;
+    background: var(--btn-bg); color: var(--text);
+    border: 1px solid var(--border2); font-size: 9px;
+    border-radius: 5px; font-weight: 900; text-align: center;
+    white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-toggle-on { border-color: var(--accent) !important; color: var(--accent) !important; }
+
+.dock-section-label {
+    font-size: 7px; letter-spacing: 2px; color: var(--text4);
+    text-align: center; padding: 0 8px; margin: 0; flex-shrink: 0;
+    border-top: none; border-left: 1px solid var(--border);
+}
+.dock-section-label:first-child { border-left: none; margin-top: 0; padding-left: 0; }
+
+
+.theme-opt {
+    padding: 9px 14px; font-size: 9px; font-weight: 900; color: var(--text3);
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+    border-bottom: 1px solid var(--border);
+}
+.theme-opt:last-child { border-bottom: none; }
+.theme-opt:hover { background: var(--bg4); color: var(--text); }
+.theme-opt.theme-active { color: var(--accent); }
+
+.font-btn-opt {
+    width: 100%; padding: 9px 14px; text-align: left;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text2); font-size: 13px; font-weight: 700;
+    border-radius: 5px; cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: normal; overflow: visible; word-break: break-word; line-height: 1.3;
+}
+.font-btn-opt:hover { background: var(--bg4); color: var(--accent); border-color: var(--accent); }
+#font-search:focus { border-color: var(--accent); outline: none; }
+
+.size-control-container {
+    display: flex; flex-direction: column; gap: 5px;
+    background: var(--btn-bg); border: 1px solid var(--border);
+    padding: 7px 10px; border-radius: 5px;
+    width: 160px; box-sizing: border-box;
+}
+.size-control-container span { font-size: 9px; color: var(--accent); letter-spacing: 1px; white-space: nowrap; text-align:center; }
+.size-slider { width: 100%; accent-color: var(--accent); cursor: pointer; height: 6px; }
+#timeline-wrapper { width: 100%; background: #080808; border-top: 2px solid #222; transition: height 0.3s ease, opacity 0.3s ease; overflow: hidden; display: flex; flex-direction: column; flex-shrink: 0; }
+.timeline-hidden { height: 0px !important; opacity: 0; pointer-events: none; }
+.timeline-visible { height: clamp(140px, 38vh, 260px); opacity: 1; }
+
+#timeline-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 15px; background: #111; border-bottom: 1px solid #222; flex-shrink: 0; }
+#timeline-timer { font-family: monospace; color: #adff2f; font-size: 14px; letter-spacing: 1px; }
+
+#tl-viewport { flex: 1; overflow-x: auto; overflow-y: auto; background: #050505; position: relative; scrollbar-width: thin; scrollbar-color: #333 #0a0a0a; min-height: 0; }
+#tl-viewport::-webkit-scrollbar { display: block; height: 6px; width: 6px; }
+#tl-viewport::-webkit-scrollbar-track { background: #0a0a0a; }
+#tl-viewport::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+#tl-viewport::-webkit-scrollbar-thumb:hover { background: #555; }
+#tl-content { width: 10000px; position: relative; background-image: linear-gradient(90deg, #111 1px, transparent 1px); background-size: 40px 100%; }
+
+.track { width: 100%; height: 30px; border-bottom: 1px solid #111; position: relative; display: flex; align-items: center; }
+.track-label { position: sticky; left: 0; width: 80px; height: 100%; background: rgba(0,0,0,0.9); font-size: 7px; color: #555; display: flex; align-items: center; padding-left: 5px; z-index: 5; border-right: 1px solid #222; flex-shrink: 0; }
+
+.vocal-block { position: absolute; height: 24px; background: var(--m-color); border: 1px solid rgba(255,255,255,0.4); border-radius: 3px; font-size: 7.5px; color: #000; display: flex; align-items: center; padding: 0 4px; white-space: nowrap; overflow: hidden; cursor: grab; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.5); min-width: 8px !important; box-sizing: border-box; touch-action: none; user-select: none; -webkit-user-select: none; will-change: transform; }
+.vocal-block:active { cursor: grabbing; }
+.vocal-block.dragging { opacity: 0.85; box-shadow: 0 4px 16px rgba(0,0,0,0.7); z-index: 20; }
+
+#playhead { position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: #ff0000; z-index: 10; pointer-events: none; box-shadow: 0 0 8px rgba(255,0,0,0.8); }
+
+.vocal-block.passing-through { border: 2px solid #fff !important; box-shadow: 0 0 12px 1px #fff; z-index: 4; }
+
+/* Resize edge indicators */
+.vocal-block::before, .vocal-block::after {
+    content: ''; position: absolute; top: 0; width: 14px; height: 100%; z-index: 3; cursor: ew-resize;
+}
+.vocal-block::before { left: 0; }
+.vocal-block::after { right: 0; }
+
+.setup-preset-btn { background: var(--bg4); border: 1px solid var(--border2); color: var(--text); padding: 10px; border-radius: 4px; font-size: 11px; text-align: left; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; cursor: pointer; }
+.setup-preset-btn:hover { background: var(--bg3); border-color: var(--accent); }
+
+.save-slot-card { background: var(--bg3); border: 1px solid var(--border); padding: 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.save-manager-header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; padding: 15px; box-sizing: border-box; }
+.sm-header-btn { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); padding: 6px 12px; font-size: 11px; font-weight: 900; border-radius: 4px; cursor: pointer; }
+.save-list-container { width: 100%; max-width: 400px; height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px; box-sizing: border-box; }
+
+.vocal-member-panel { flex: 1; min-width: calc(25% - 4px); background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 8px 4px; text-align: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.vocal-member-panel.vp-active { background: var(--vp-color) !important; border-color: var(--vp-color) !important; box-shadow: 0 0 10px var(--vp-color); }
+.vocal-member-panel.vp-active .vp-name { color: #000 !important; }
+.vp-name { font-size: 8px; font-weight: 900; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; }
+#vocal-tap-panels-container { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; padding-top: 4px; }
+
+.adlib-member-panel { flex: 1; min-width: calc(25% - 4px); background: var(--bg3); border: 1px solid #ffe600; border-radius: 4px; padding: 8px 4px; text-align: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.adlib-member-panel .vp-name { color: #ffe600; }
+.adlib-member-panel.ap-active { background: #ffe600 !important; border-color: #ffe600 !important; box-shadow: 0 0 10px #ffe600; }
+.adlib-member-panel.ap-active .vp-name { color: #000 !important; }
+#adlib-tap-panels-container { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; padding-top: 4px; }
+
+/* MEMBER BUILDER ROWS */
+.mb-row { display:flex; gap:6px; align-items:center; background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:8px 10px; box-sizing:border-box; }
+.mb-color { width:36px; height:36px; border:1px solid var(--border2); border-radius:4px; background:var(--bg4); cursor:pointer; flex-shrink:0; padding:2px; }
+.mb-name { flex:1; min-width:0; background:var(--input-bg); border:1px solid var(--border2); color:var(--text); padding:8px 10px; border-radius:4px; font-weight:900; font-size:11px; outline:none; text-transform:uppercase; }
+.mb-name::placeholder { color:var(--text4); }
+.mb-key-btn {
+    width: 52px; flex-shrink: 0;
+    background: var(--input-bg); border: 1px solid var(--border2);
+    color: var(--accent); padding: 8px 4px; border-radius: 4px;
+    font-weight: 900; font-size: 10px; text-align: center;
+    letter-spacing: 1px; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    white-space: nowrap; overflow: hidden;
+}
+.mb-key-btn.listening {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #000;
+    animation: key-pulse 0.7s ease-in-out infinite alternate;
+}
+.mb-key-btn.key-set {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+@keyframes key-pulse {
+    from { opacity: 0.75; }
+    to   { opacity: 1; }
+}
+.mb-photo-btn { background:var(--bg4); border:1px solid var(--border2); color:var(--accent); font-size:9px; padding:6px 8px; border-radius:4px; cursor:pointer; white-space:nowrap; flex-shrink:0; font-weight:900; letter-spacing:1px; }
+.mb-photo-btn.added { color:var(--text); border-color:var(--accent); }
+
+.mb-photo-preview {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: var(--bg4) center/cover no-repeat;
+    border: 1px solid var(--border2);
+    cursor: pointer; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mb-photo-preview::after {
+    content: '👤'; font-size: 14px; opacity: 0.35; line-height: 1;
+}
+.mb-photo-preview.has-img { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.mb-photo-preview.has-img::after { content: ''; }
+
+/* KEY BADGE on member rows — inline next to the member name, hidden until '=' is pressed */
+.key-badge {
+    display: none; /* hidden by default; toggled visible via JS when '=' is pressed */
+    background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.55); font-size: calc(var(--row-height) * 0.14);
+    font-weight: 900; padding: 1px 5px; border-radius: 3px;
+    pointer-events: none; line-height: 1.4; flex-shrink: 0;
+    align-self: center; margin-left: 6px;
+}
+.key-badge.key-badge-visible { display: inline-flex; align-items: center; }
+body[data-theme="light"] .key-badge { background: rgba(255,255,255,0.6); border-color: rgba(0,0,0,0.18); color: rgba(0,0,0,0.5); }
+
+/* MEDIA QUERIES FOR DEVICE OPTIMIZATION */
+@media (max-width: 480px) {
+    #viewport-container { padding: 0; }
+    .btn { font-size: 7px; padding: 6px 1px; }
+    .track-label { width: 60px; }
+    .dock-row { gap: 2px; }
+}
+
+@media (min-width: 768px) {
+    .btn { font-size: 10px; padding: 11px 6px; }
+    .size-control-container span { font-size: 10px; }
+}
+
+@media (min-width: 1024px) {
+    .btn { font-size: 10px; }
+}
+</style>
+<div id="font-dialog" class="overlay hidden" style="justify-content:flex-start; padding:0;">
+        <div style="width:100%; max-width:360px; height:100%; display:flex; flex-direction:column; padding:20px 16px 16px; box-sizing:border-box;">
+            <h2 style="color:var(--accent); font-size:14px; letter-spacing:2px; margin:0 0 10px; flex-shrink:0;">SELECT FONT</h2>
+            <div style="position:relative; flex-shrink:0; margin-bottom:10px;">
+                <input id="font-search" type="text" placeholder="SEARCH FONTS..." autocomplete="off" spellcheck="false"
+                    oninput="filterFonts(this.value)"
+                    style="width:100%; box-sizing:border-box; background:var(--input-bg); border:1px solid var(--border2);
+                           color:var(--text); padding:9px 32px 9px 12px; border-radius:5px; font-size:10px;
+                           font-weight:900; font-family:inherit; outline:none; text-transform:uppercase;">
+                <span id="font-search-clear" onclick="clearFontSearch()"
+                    style="display:none; position:absolute; right:10px; top:50%; transform:translateY(-50%);
+                           color:var(--text4); font-size:12px; cursor:pointer; line-height:1;">✕</span>
+            </div>
+            <div id="font-list" style="flex:1; min-height:0; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:2px;"></div>
+            <div id="font-no-results" style="display:none; text-align:center; color:var(--text4); font-size:9px; padding:24px 0; flex-shrink:0;">NO FONTS MATCH</div>
+            <button class="sm-header-btn" style="margin-top:12px; width:100%; flex-shrink:0; border-color:#ff4444; color:#ff4444;" onclick="closeFonts()">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="save-manager-dialog" class="overlay hidden" style="justify-content:flex-start; padding: 20px 0; overflow-y:auto;">
+        <div style="width:100%; max-width:400px; display:flex; flex-direction:column; gap:10px; padding:0 16px; box-sizing:border-box;">
+
+            <!-- Box 1: Name input -->
+            <div style="background:#111; border:1px solid #333; border-radius:8px; padding:14px; display:flex; flex-direction:column; gap:8px;">
+                <span style="font-size:9px; color:#666; letter-spacing:2px;">GROUP / DISTRIBUTION NAME</span>
+                <input type="text" id="save-group-title-input" placeholder="TYPE NAME HERE..." class="setup-input" style="width:100%; text-align:left; padding:12px; font-size:12px; box-sizing:border-box; margin:0; border-radius:6px;">
+            </div>
+
+            <!-- Box 2: Save button -->
+            <div style="background:#111; border:1px solid #333; border-radius:8px; padding:14px; display:flex; flex-direction:column; gap:8px;">
+                <button onclick="commitGroupSave()" style="width:100%; background:#adff2f; color:#000; border:none; padding:14px; font-weight:900; font-size:11px; letter-spacing:2px; border-radius:6px; cursor:pointer;">SAVE GROUP</button>
+                <span style="font-size:8px; color:#666; letter-spacing:1px; text-align:center;">SAVES PHOTOS, BAR LINES, SECONDS, PERCENTS &amp; CHART TO THE SAVED LIST BELOW</span>
+            </div>
+
+            <!-- Box 3: Saved list -->
+            <div style="background:#111; border:1px solid #333; border-radius:8px; padding:14px; display:flex; flex-direction:column; gap:8px;">
+                <span style="font-size:9px; color:#adff2f; letter-spacing:2px;">SAVED GROUPS / DISTRIBUTIONS</span>
+                <div id="save-list-target" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto;"></div>
+            </div>
+
+            <!-- Box 4: Deleted list -->
+            <div style="background:#111; border:1px solid #333; border-radius:8px; padding:14px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:9px; color:#ff4444; letter-spacing:2px;">DELETE GROUPS / DISTRIBUTIONS</span>
+                    <button id="sm-delete-toggle" onclick="toggleSaveDeleteMode()" style="background:transparent; border:1px solid #444; color:#ff4444; font-size:8px; font-weight:900; padding:4px 8px; border-radius:4px; cursor:pointer;">SELECT TO DELETE</button>
+                </div>
+                <div id="delete-list-target" style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto;"></div>
+            </div>
+
+            <!-- Box 5: Exit -->
+            <div style="background:#111; border:1px solid #333; border-radius:8px; padding:14px;">
+                <button onclick="closeSaveManager()" style="width:100%; background:transparent; color:#fff; border:1px solid #444; padding:14px; font-weight:900; font-size:11px; letter-spacing:2px; border-radius:6px; cursor:pointer;">EXIT</button>
+            </div>
+
+        </div>
+    </div>
+    <script>
+    // Safe storage — falls back to in-memory when localStorage is blocked (e.g. Perchance)
+    let _memStore = {};
+    const safeStorage = {
+        getItem(k) { try { return window.localStorage.getItem(k); } catch(e) { return _memStore[k] ?? null; } },
+        setItem(k, v) { try { window.localStorage.setItem(k, v); return true; } catch(e) { _memStore[k] = v; return false; } },
+        removeItem(k) { try { window.localStorage.removeItem(k); } catch(e) { delete _memStore[k]; } }
+    };
+
+    let members = [];
+    let lastTime = 0;
+    let activeLoop = null;
+    let autoSort = true;
+    let manualMax = 0; 
+    let showMax = false;
+    let saveDeleteMode = false;
+    let currentLineHeight = 80; 
+    let vocalPanelsMode = false; 
+    let adlibPanelsMode = false;
+    let twoColumnMode = false;
+    const ADLIB_COLOR = '#ffe600';
+    let chartBorderProgress = {};
+    function lerpColor(c1, c2, t) {
+        const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+        const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+        const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+        return `rgb(${r},${g},${b})`;
+    }
+    const crystalColors = ["#D000FF", "#00E5FF", "#FF0055", "#00FF66", "#FFDD00", "#0066FF"];
+
+    let timelineClips = [];
+    let playheadPx = 0;
+    let pxPerSec = 40; 
+    let isPlaying = false;
+    let myChart = null;
+    let lastChartUpdateTime = 0;
+    let chartDisplayData = []; // smoothly lerped values fed to chart
+
+    const MIC_SVG = `<svg viewBox="0 0 24 24" fill="white" width="14" height="14"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.04 6.58 5 7.72V21h4v-2.28c2.96-1.14 5-4.19 5-7.72h-2z"/></svg>`;
+
+    window.addEventListener('load', () => {
+        window.history.pushState({ activeOverlay: "none" }, "");
+        renderPresetsOnSetup();
+        // Seed default 6 member rows in builder
+        for (let i = 0; i < 6; i++) addMemberRow();
+    });
+
+    const THEMES = {
+        dark:     { label: '◑ DARK' },
+        light:    { label: '☀ LIGHT' },
+        midnight: { label: '★ MIDNIGHT' },
+        rose:     { label: '✿ ROSE' },
+        amber:    { label: '◈ AMBER' },
+        forest:   { label: '❋ FOREST' },
+        slate:    { label: '◆ SLATE' },
+        cherry:   { label: '♦ CHERRY' },
+    };
+    let _currentTheme = 'dark';
+    let _themeDropOpen = false;
+
+    function selectTheme(id) {
+        _currentTheme = id;
+        // Remove all theme data-attrs; dark is the :root default so no attribute needed
+        document.body.removeAttribute('data-theme');
+        if (id !== 'dark') document.body.setAttribute('data-theme', id);
+        // Also keep light-mode class in sync for any code that may check it
+        document.body.classList.toggle('light-mode', id === 'light');
+        // Update button label
+        const lbl = document.getElementById('theme-btn-label');
+        if (lbl) lbl.textContent = THEMES[id]?.label || id.toUpperCase();
+        // Mark active option
+        document.querySelectorAll('.theme-opt').forEach(el => {
+            el.classList.toggle('theme-active', el.getAttribute('data-theme') === id);
+        });
+        closeThemeDropdown();
+    }
+
+    function toggleThemeDropdown(e) {
+        if (e) e.preventDefault();
+        _themeDropOpen ? closeThemeDropdown() : openThemeDropdown();
+    }
+    function openThemeDropdown() {
+        _themeDropOpen = true;
+        const dd = document.getElementById('theme-dropdown');
+        const arrow = document.getElementById('theme-btn-arrow');
+        if (dd) dd.style.display = 'block';
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+        // Close on outside click
+        setTimeout(() => document.addEventListener('pointerdown', _themeOutsideClick), 0);
+    }
+    function closeThemeDropdown() {
+        _themeDropOpen = false;
+        const dd = document.getElementById('theme-dropdown');
+        const arrow = document.getElementById('theme-btn-arrow');
+        if (dd) dd.style.display = 'none';
+        if (arrow) arrow.style.transform = '';
+        document.removeEventListener('pointerdown', _themeOutsideClick);
+    }
+    function _themeOutsideClick(e) {
+        const wrap = document.getElementById('theme-dropdown-wrap');
+        if (wrap && !wrap.contains(e.target)) closeThemeDropdown();
+    }
+    // Legacy — keep in case anything calls it
+    function toggleTheme(e) { toggleThemeDropdown(e); }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        if (e.key === 'Enter') { e.preventDefault(); togglePercentReveal(); return; }
+        if (e.key === '=') { e.preventDefault(); toggleKeyBadges(); return; }
+        const key = e.key.toUpperCase();
+        const hit = members.find(m => m.hotkey === key);
+        if (hit) tgl(hit.id);
+    });
+
+    let keyBadgesVisible = false;
+    function toggleKeyBadges() {
+        keyBadgesVisible = !keyBadgesVisible;
+        document.querySelectorAll('.key-badge').forEach(el => {
+            el.classList.toggle('key-badge-visible', keyBadgesVisible);
+        });
+    }
+
+    let pctRevealed = false;
+
+    // Percentages are hidden by default — collapsed to zero width, so the timer sits flush at the
+    // far right (the percentage's usual spot). Pressing Enter reveals them one at a time, largest
+    // share first (decreasing order), pushing the timer left as each one grows in. Pressing Enter
+    // again hides them and the timer slides back right to its default position.
+    function togglePercentReveal() {
+        if (!members.length) return;
+        const pctEls = document.querySelectorAll('.m-pct');
+        pctEls.forEach(el => { clearTimeout(el._revealTimer); });
+        if (pctRevealed) {
+            pctEls.forEach(el => {
+                el.classList.remove('pct-revealed');
+                const box = el.previousElementSibling;
+                if (box) box.classList.remove('pct-make-room');
+            });
+            pctRevealed = false;
+            return;
+        }
+        pctRevealed = true;
+        const order = [...members].sort((a, b) => b.time - a.time);
+        const STAGGER_MS = 90;
+        order.forEach((m, i) => {
+            const el = document.getElementById(`pct-${m.id}`);
+            if (!el) return;
+            el.classList.remove('pct-revealed');
+            const box = el.previousElementSibling;
+            if (box) box.classList.remove('pct-make-room');
+            el._revealTimer = setTimeout(() => {
+                el.classList.add('pct-revealed');
+                if (box) box.classList.add('pct-make-room');
+            }, i * STAGGER_MS);
+        });
+    }
+
+    window.addEventListener('popstate', (event) => {
+        let fontOpen = !document.getElementById('font-dialog').classList.contains('hidden');
+        let creatorOpen = !document.getElementById('save-group-creator').classList.contains('hidden');
+        let managerOpen = !document.getElementById('save-manager-dialog').classList.contains('hidden');
+        if (fontOpen || creatorOpen || managerOpen) {
+            window.history.pushState({ activeOverlay: "locked" }, "");
+            closeFonts(); closeGroupCreator(); closeSaveManager();
+        } else {
+            window.history.pushState({ activeOverlay: "none" }, "");
+        }
+    });
+
+    // Keep the two-column bottom panel's height/position correct if the window is resized
+    // (its height is computed relative to window.innerHeight — see _applyTwoColPanelHeight).
+    window.addEventListener('resize', () => {
+        if (twoColumnMode) _applyTwoColPanelHeight();
+    });
+
+    function togglePresetDropdown() {
+        const content = document.getElementById('preset-dropdown-content');
+        const arrow = document.getElementById('preset-arrow');
+        const isHidden = content.classList.contains('hidden');
+        if (isHidden) {
+            content.classList.remove('hidden');
+            arrow.style.transform = 'rotate(180deg)';
+        } else {
+            content.classList.add('hidden');
+            arrow.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    function renderPresetsOnSetup() {
+        let rawData = safeStorage.getItem('KPOP_LINE_SAVED_GROUPS');
+        let arrayData = rawData ? JSON.parse(rawData) : [];
+        const container = document.getElementById('presets-container');
+        const list = document.getElementById('setup-preset-list');
+        if (arrayData.length > 0) {
+            container.style.display = 'block';
+            list.innerHTML = arrayData.map((item, index) => `
+                <div class="setup-preset-btn" onclick="handleSlotClick(${index})">
+                    <span>${item.title}</span>
+                    <span style="color: #adff2f; font-size: 8px; font-weight: 900;">${item.members.length} MBRS</span>
+                </div>
+            `).join('');
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    const activeBorderPlugin = {
+        id: 'activeBorderPlugin',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            const meta = chart.getDatasetMeta(0);
+            if (!meta.data.length) return;
+            const curTime = playheadPx / pxPerSec;
+            const liveActiveIds = timelineClips.filter(c => curTime >= c.start && curTime <= (c.start + c.duration)).map(c => c.memberId);
+            members.forEach(m => { if(m.active && !m.muted) liveActiveIds.push(m.id); });
+            let sortedMembers = [...members].sort((a, b) => b.time - a.time);
+            meta.data.forEach((element, index) => {
+                if (index < sortedMembers.length) {
+                    const memberId = sortedMembers[index].id;
+                    if (liveActiveIds.includes(memberId)) {
+                        const { x, y, startAngle, endAngle, innerRadius, outerRadius } = element;
+                        ctx.save(); ctx.beginPath(); ctx.arc(x, y, outerRadius, startAngle, endAngle);
+                        ctx.arc(x, y, innerRadius, endAngle, startAngle, true); ctx.closePath();
+                        const progress = chartBorderProgress[memberId] || 0;
+                        ctx.strokeStyle = lerpColor([255, 255, 255], [255, 230, 0], progress);
+                        ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
+                    }
+                }
+            });
+        }
+    };
+      function getChartHeight(count) {
+        // Fewer members = bigger chart, more members = smaller chart
+        // 1-2 members: 220px, 3-4: 180px, 5-6: 150px, 7-9: 120px, 10-12: 100px, 13+: 80px
+        // Measured against the line-distribution column itself (now 50% width), not the full window,
+        // so the chart sizes correctly for the space it actually has.
+        const col = document.querySelector('.main-content-area');
+        const vw = col ? col.clientWidth : window.innerWidth;
+        const isSmall = vw < 480;
+        if (count <= 2)  return isSmall ? 190 : 220;
+        if (count <= 4)  return isSmall ? 155 : 180;
+        if (count <= 6)  return isSmall ? 130 : 155;
+        if (count <= 9)  return isSmall ? 105 : 125;
+        if (count <= 12) return isSmall ?  88 : 105;
+        return isSmall ? 72 : 88;
+    }
+
+    function initChart() {
+        const wrap = document.getElementById('chart-container-wrap');
+        if (wrap) wrap.style.height = getChartHeight(members.length) + 'px';
+
+        // Seed smooth display values
+        chartDisplayData = members.map(m => ({ id: m.id, name: m.name, color: m.color, disp: Math.max(0.001, m.time) }));
+
+        const ctx = document.getElementById('distributionChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'doughnut',
+            plugins: [activeBorderPlugin],
+            data: {
+                labels: chartDisplayData.map(d => d.name),
+                datasets: [{
+                    data: chartDisplayData.map(d => d.disp),
+                    backgroundColor: chartDisplayData.map(d => d.color),
+                    borderWidth: 0,
+                    hoverOffset: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                layout: { padding: 5 },
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                animation: false
+            }
+        });
+    }
+
+    function toggleTimelineUI(e) {
+        if(e) e.preventDefault();
+        const wrapper = document.getElementById('timeline-wrapper');
+        const btn = document.getElementById('tl-toggle-btn');
+        const isHidden = wrapper.classList.contains('timeline-hidden');
+        if(isHidden) {
+            wrapper.classList.remove('timeline-hidden');
+            wrapper.classList.add('timeline-visible');
+            btn.classList.add('btn-toggle-on');
+        } else {
+            wrapper.classList.add('timeline-hidden');
+            wrapper.classList.remove('timeline-visible');
+            btn.classList.remove('btn-toggle-on');
+        }
+    }
+
+    function updateLineSizes(val) {
+        currentLineHeight = parseInt(val);
+        const vp = document.getElementById('viewport');
+        if (vp) {
+            vp.style.setProperty('--row-height', currentLineHeight + 'px');
+            vp.style.height = _viewportHeightFor(members.length) + 'px';
+        }
+        _applyTwoColPanelHeight();
+    }
+
+    // Height of the viewport for a given member count, accounting for two-column mode
+    // (rows split into a left half and a right half, so the tallest column has ceil(n/2) rows).
+    function _viewportHeightFor(count) {
+        const rows = twoColumnMode ? Math.ceil(count / 2) : count;
+        return rows * currentLineHeight;
+    }
+
+    // The two-column bottom panel's vertical padding (top+bottom) from its CSS rule — kept in one
+    // place so the height math below matches what's actually applied.
+    const TWO_COL_PANEL_PADDING = 32; // 16px top + 16px bottom, see #viewport-container.two-col-active
+    const TWO_COL_MAX_HEIGHT_RATIO = 0.7; // never let the panel claim more than 70% of the screen
+
+    // Sizes and positions the two-column bottom panel so the space it occupies tracks the line-size
+    // slider (taller rows / more rows per column => taller panel) instead of always reserving a fixed
+    // half of the screen. Capped so a large line size or a big roster can't swallow the whole screen.
+    function _applyTwoColPanelHeight() {
+        const vpContainer = document.getElementById('viewport-container');
+        if (!vpContainer || !twoColumnMode) return;
+        const contentHeight = _viewportHeightFor(members.length);
+        const desired = contentHeight + TWO_COL_PANEL_PADDING;
+        const maxHeight = window.innerHeight * TWO_COL_MAX_HEIGHT_RATIO;
+        const panelHeight = Math.min(desired, maxHeight);
+        vpContainer.style.height = panelHeight + 'px';
+        vpContainer.style.top = (window.innerHeight - panelHeight) + 'px';
+    }
+
+    // Translates a display-order index into a {tx, ty} pixel offset for the member row.
+    // Single-column mode: simple vertical stack. Two-column mode: first half of `total`
+    // stacks down the left column, second half stacks down the right column.
+    // `colWidth` (viewport clientWidth) is passed in rather than measured here, since this
+    // runs per-row inside a hot render loop and repeated layout reads would be wasteful.
+    function _rowPosition(idx, total, colWidth) {
+        if (!twoColumnMode) {
+            return { tx: 0, ty: idx * currentLineHeight };
+        }
+        const colSize = Math.ceil(total / 2);
+        const col = idx < colSize ? 0 : 1;
+        const rowInCol = col === 0 ? idx : idx - colSize;
+        const w = colWidth !== undefined ? colWidth : document.getElementById('viewport').clientWidth;
+        const tx = col === 0 ? 0 : Math.ceil((w + 20) / 2);
+        return { tx, ty: rowInCol * currentLineHeight };
+    }
+
+    // Immediately repositions every member row according to the current sort order and column
+    // mode. Used right after toggling two-column mode so cards transpose to their new spots without
+    // waiting for the next animation-loop tick — the CSS transition on .member-row's transform
+    // handles the actual smooth glide between old and new positions.
+    function _layoutMemberRows() {
+        if (!members.length) return;
+        let displayOrder = autoSort ? [...members].sort((a, b) => b.time - a.time) : members;
+        for (let i = 0; i < displayOrder.length; i++) {
+            const m = displayOrder[i];
+            const d = _domCache[m.id]; if (!d || !d.row) continue;
+            const idx = autoSort ? i : m.id;
+            const { tx, ty } = _rowPosition(idx, displayOrder.length);
+            d.row.style.transform = `translate3d(${tx}px,${ty}px,0)`;
+            d.row._lastY = ty; d.row._lastX = tx;
+        }
+    }
+
+    function toggleTwoColumn(e) {
+        if (e) e.preventDefault();
+        twoColumnMode = !twoColumnMode;
+        const btn = document.getElementById('two-col-toggle-btn');
+        const vpContainer = document.getElementById('viewport-container');
+        const vp = document.getElementById('viewport');
+        if (btn) btn.classList.toggle('btn-toggle-on', twoColumnMode);
+        if (vpContainer) vpContainer.classList.toggle('two-col-active', twoColumnMode);
+        if (vp) vp.classList.toggle('two-col-mode', twoColumnMode);
+        if (vp) vp.style.height = _viewportHeightFor(members.length) + 'px';
+        if (twoColumnMode) {
+            _applyTwoColPanelHeight();
+        } else if (vpContainer) {
+            // Clear the inline top/height set while two-column mode was active so the element
+            // falls back cleanly to its normal in-flow sizing.
+            vpContainer.style.top = '';
+            vpContainer.style.height = '';
+        }
+        // Force an immediate re-layout pass so cards animate to their new column positions right away
+        // rather than waiting for the next animation-loop tick.
+        _layoutMemberRows();
+    }
+
+    function triggerVideo(e) { if(e) e.preventDefault(); document.getElementById('video-upload').click(); }
+    function triggerAudio(e) { if(e) e.preventDefault(); document.getElementById('audio-upload').click(); }
+
+    function handleVideo(input) {
+        const file = input.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            const v = document.getElementById('bg-video');
+            v.src = url;
+            document.getElementById('bg-video-container').style.display = 'block';
+            document.getElementById('video-manual-bar').style.display = 'flex';
+            playVid();
+        }
+    }
+
+    function handleAudio(input) {
+        const file = input.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            const a = document.getElementById('bg-audio');
+            a.src = url;
+            document.getElementById('video-manual-bar').style.display = 'flex';
+            playVid();
+        }
+    }
+
+    function playVid() {
+        const v = document.getElementById('bg-video');
+        const a = document.getElementById('bg-audio');
+        if (v.src) v.play();
+        if (a.src) a.play();
+        isPlaying = true;
+        document.getElementById('m-play-btn').classList.add('v-play-active');
+        document.getElementById('m-stop-btn').classList.remove('v-play-active');
+    }
+
+    function stopVid() {
+        const v = document.getElementById('bg-video');
+        const a = document.getElementById('bg-audio');
+        if (v.src) v.pause();
+        if (a.src) a.pause();
+        isPlaying = false;
+        members.forEach(m => stopRecording(m));
+        document.getElementById('m-stop-btn').classList.add('v-play-active');
+        document.getElementById('m-play-btn').classList.remove('v-play-active');
+    }
+
+    function skipVid(secs) {
+        const v = document.getElementById('bg-video');
+        const a = document.getElementById('bg-audio');
+        if (v.src) v.currentTime += secs;
+        if (a.src) a.currentTime += secs;
+    }
+
+    function startRecording(m, isAdlib) {
+        if (!m || m.activeClipId) return;
+        const id = 'c-' + Date.now() + Math.random().toString(36).substr(2, 4);
+        const startTime = playheadPx / pxPerSec;
+        const newClip = { id, memberId: m.id, start: startTime, duration: 0, color: isAdlib ? ADLIB_COLOR : m.color, name: m.name, isAdlib: !!isAdlib };
+        timelineClips.push(newClip);
+        m.activeClipId = id;
+        renderClipUI(newClip);
+    }
+
+    function stopRecording(m) {
+        if (!m || !m.activeClipId) return;
+        const clip = timelineClips.find(c => c.id === m.activeClipId);
+        if (clip) {
+            clip.duration = Math.max(0, (playheadPx / pxPerSec) - clip.start);
+            const el = document.getElementById(clip.id);
+            if(el) {
+                let targetWidth = (playheadPx - (clip.start * pxPerSec));
+                el.style.width = targetWidth + 'px';
+                el.style.display = targetWidth > 0.05 ? 'flex' : 'none';
+            }
+        }
+        m.activeClipId = null;
+    }
+
+    function renderClipUI(clip) {
+        const track = document.getElementById(`track-${clip.memberId}`);
+        if (!track) return;
+        const el = document.createElement('div');
+        el.className = 'vocal-block';
+        el.id = clip.id;
+        el.style.setProperty('--m-color', clip.color);
+        let startX = clip.start * pxPerSec;
+        el.style.transform = `translateX(${startX}px)`;
+        el.setAttribute('data-x', startX);
+        let w = Math.max(0, clip.duration * pxPerSec);
+        el.style.width = w + 'px';
+        el.style.display = w > 0.05 ? 'flex' : 'none';
+        el.innerText = clip.name;
+        track.appendChild(el);
+    }
+
+    function handleTimelineClicks(event) {
+        const rect = document.getElementById('tl-content').getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        playheadPx = x;
+        const time = playheadPx / pxPerSec;
+        const v = document.getElementById('bg-video');
+        const a = document.getElementById('bg-audio');
+        if(v.src) v.currentTime = time;
+        if(a.src) a.currentTime = time;
+        updatePlayheadUI();
+    }
+
+    function updatePlayheadUI() {
+        document.getElementById('playhead').style.left = playheadPx + "px";
+        const t = playheadPx / pxPerSec;
+        document.getElementById('timeline-timer').innerText = `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}.${Math.floor((t%1)*100).toString().padStart(2,'0')}`;
+    }
+
+    function saveCurrentTimeline() { alert("Timeline state saved internally."); }
+
+    function clearTimeline() {
+        timelineClips = [];
+        members.forEach(m => {
+            m.time = 0; m.activeClipId = null; m.active = false; m.adlib = false;
+            const row = document.getElementById(`row-${m.id}`); if(row) row.style.setProperty('--m-color', m.color);
+        });
+        document.querySelectorAll('.vocal-block').forEach(el => el.remove());
+        document.querySelectorAll('.member-row').forEach(r => r.classList.remove('active'));
+        if(adlibPanelsMode) buildAdlibPanelsDOM();
+        if(vocalPanelsMode) buildVocalPanelsDOM();
+        playheadPx = 0;
+        const v = document.getElementById('bg-video');
+        const a = document.getElementById('bg-audio');
+        if(v.src) v.currentTime = 0;
+        if(a.src) a.currentTime = 0;
+        updatePlayheadUI();
+    }
+
+    function toggleMax(e) {
+        if(e) e.preventDefault();
+        let input = prompt("SET MAX TIME (0.0 - 1000.0):", manualMax || "80.0");
+        if (input !== null) {
+            let val = parseFloat(input);
+            if (!isNaN(val) && val >= 0) {
+                manualMax = Math.min(val, 1000); showMax = true;
+                const btn = document.getElementById('max-btn');
+                btn.classList.add('btn-toggle-on');
+                btn.innerText = `MAX: ${manualMax.toFixed(1)}`;
+            } else {
+                showMax = false; manualMax = 0;
+                const btn = document.getElementById('max-btn');
+                btn.classList.remove('btn-toggle-on');
+                btn.innerText = "MAX: 0.0";
+            }
+        }
+    }
+    // ── FONT PICKER ──────────────────────────────────────────────────────────
+    const FONT_LIST = [
+        { name: 'Arial',             stack: "'Arial', sans-serif",                            family: 'Arial' },
+        { name: 'Barlow',            stack: "'Barlow', sans-serif",                           family: 'Barlow' },
+        { name: 'Bebas Neue',        stack: "'Bebas Neue', sans-serif",                       family: 'Bebas Neue' },
+        { name: 'Courier New',       stack: "'Courier New', monospace",                       family: 'Courier New' },
+        { name: 'DM Sans',           stack: "'DM Sans', sans-serif",                          family: 'DM Sans' },
+        { name: 'Exo 2',             stack: "'Exo 2', sans-serif",                            family: 'Exo 2' },
+        { name: 'Fira Code',         stack: "'Fira Code', monospace",                         family: 'Fira Code' },
+        { name: 'Gothic A1',         stack: "'Gothic A1', sans-serif",                        family: 'Gothic A1' },
+        { name: 'Helvetica',         stack: "'Helvetica World', Helvetica, Arial, sans-serif", family: 'Helvetica World' },
+        { name: 'IBM Plex Mono',     stack: "'IBM Plex Mono', monospace",                     family: 'IBM Plex Mono' },
+        { name: 'Impact',            stack: "'Impact', sans-serif",                           family: 'Impact' },
+        { name: 'Inter',             stack: "'Inter', sans-serif",                            family: 'Inter' },
+        { name: 'JetBrains Mono',    stack: "'JetBrains Mono', monospace",                    family: 'JetBrains Mono' },
+        { name: 'Jost',              stack: "'Jost', sans-serif",                             family: 'Jost' },
+        { name: 'League Spartan',    stack: "'League Spartan', sans-serif",                   family: 'League Spartan' },
+        { name: 'Metropolis',        stack: "'Metropolis', sans-serif",                       family: 'Metropolis' },
+        { name: 'Montserrat',        stack: "'Montserrat', sans-serif",                       family: 'Montserrat' },
+        { name: 'Nunito',            stack: "'Nunito', sans-serif",                           family: 'Nunito' },
+        { name: 'Oswald',            stack: "'Oswald', sans-serif",                           family: 'Oswald' },
+        { name: 'Outfit',            stack: "'Outfit', sans-serif",                           family: 'Outfit' },
+        { name: 'Plus Jakarta Sans', stack: "'Plus Jakarta Sans', sans-serif",                family: 'Plus Jakarta Sans' },
+        { name: 'Poppins',           stack: "'Poppins', sans-serif",                          family: 'Poppins' },
+        { name: 'Rajdhani',          stack: "'Rajdhani', sans-serif",                         family: 'Rajdhani' },
+        { name: 'Roboto',            stack: "'Roboto', sans-serif",                           family: 'Roboto' },
+        { name: 'Segoe UI',          stack: "'Segoe UI', sans-serif",                         family: 'Segoe UI' },
+        { name: 'Share Tech Mono',   stack: "'Share Tech Mono', monospace",                   family: 'Share Tech Mono' },
+        { name: 'Source Code Pro',   stack: "'Source Code Pro', monospace",                   family: 'Source Code Pro' },
+        { name: 'Space Grotesk',     stack: "'Space Grotesk', sans-serif",                    family: 'Space Grotesk' },
+        { name: 'Space Mono',        stack: "'Space Mono', monospace",                        family: 'Space Mono' },
+        { name: 'Syne',              stack: "'Syne', sans-serif",                             family: 'Syne' },
+    ];
+
+    function _buildFontList(query) {
+        const list = document.getElementById('font-list');
+        const noResults = document.getElementById('font-no-results');
+        if (!list) return;
+        const q = (query || '').trim().toLowerCase();
+        const filtered = q ? FONT_LIST.filter(f => f.name.toLowerCase().includes(q)) : FONT_LIST;
+        if (filtered.length === 0) {
+            list.innerHTML = '';
+            if (noResults) noResults.style.display = 'block';
+            return;
+        }
+        if (noResults) noResults.style.display = 'none';
+        list.innerHTML = filtered.map(f =>
+            `<button class="font-btn-opt" style="font-family:${f.stack};"
+                onclick="selectFont('${f.stack.replace(/'/g, "\\'")}')">${f.name}</button>`
+        ).join('');
+    }
+
+    function filterFonts(val) {
+        _buildFontList(val);
+        const clear = document.getElementById('font-search-clear');
+        if (clear) clear.style.display = val ? 'block' : 'none';
+    }
+
+    function clearFontSearch() {
+        const inp = document.getElementById('font-search');
+        if (inp) { inp.value = ''; inp.focus(); }
+        filterFonts('');
+    }
+
+    function openFonts(e) {
+        if (e) e.preventDefault();
+        _buildFontList('');
+        const inp = document.getElementById('font-search');
+        if (inp) inp.value = '';
+        const clear = document.getElementById('font-search-clear');
+        if (clear) clear.style.display = 'none';
+        document.getElementById('font-dialog').classList.remove('hidden');
+        setTimeout(() => { if (inp) inp.focus(); }, 80);
+    }
+    function closeFonts() { document.getElementById('font-dialog').classList.add('hidden'); }
+    function selectFont(fontValue) { document.body.style.fontFamily = fontValue; closeFonts(); }
+
+    function openSaveManager(e) {
+        if(e) e.preventDefault();
+        // Pre-fill name from current title if members loaded
+        if(members.length > 0) {
+            let currentTitle = document.getElementById('title-input').value.trim();
+            document.getElementById('save-group-title-input').value = (currentTitle === "SONG TITLE HERE") ? "" : currentTitle;
+        }
+        saveDeleteMode = false;
+        const btn = document.getElementById('sm-delete-toggle');
+        if(btn) { btn.innerText = "SELECT TO DELETE"; btn.style.borderColor = "#444"; }
+        renderSaveList();
+        document.getElementById('save-manager-dialog').classList.remove('hidden');
+    }
+
+    function closeGroupCreator() {}
+    function commitGroupSave() {
+        let typedTitle = document.getElementById('save-group-title-input').value.trim().toUpperCase();
+        if(!typedTitle) { alert("PLEASE ENTER A GROUP NAME FIRST!"); return; }
+        if(members.length === 0) { alert("NO ACTIVE DISTRIBUTION TO SAVE!"); return; }
+        document.getElementById('title-input').value = typedTitle;
+        let rawData = safeStorage.getItem('KPOP_LINE_SAVED_GROUPS');
+        let arrayData = rawData ? JSON.parse(rawData) : [];
+        let existingIndex = arrayData.findIndex(item => item.title.toUpperCase() === typedTitle);
+        let cleanMembers = members.map(m => ({ id: m.id, name: m.name, pos: m.pos, hotkey: m.hotkey || '', color: m.color, img: m.img, time: m.time }));
+        let saveObj = { title: typedTitle, members: cleanMembers, timeline: timelineClips, stamp: Date.now() };
+        if(existingIndex >= 0) arrayData[existingIndex] = saveObj;
+        else arrayData.push(saveObj);
+        const persisted = safeStorage.setItem('KPOP_LINE_SAVED_GROUPS', JSON.stringify(arrayData));
+        renderPresetsOnSetup();
+        renderSaveList();
+        document.getElementById('save-group-title-input').value = '';
+        if(!persisted) {
+            alert("STORAGE FULL OR BLOCKED — THIS GROUP WAS NOT PERMANENTLY SAVED.\nTry removing some member photos or deleting old saved groups, then save again.");
+        }
+    }
+
+    function closeSaveManager() { document.getElementById('save-manager-dialog').classList.add('hidden'); saveDeleteMode = false; }
+
+    function toggleSaveDeleteMode() {
+        saveDeleteMode = !saveDeleteMode;
+        const btn = document.getElementById('sm-delete-toggle');
+        btn.innerText = saveDeleteMode ? "CANCEL" : "SELECT TO DELETE";
+        btn.style.borderColor = saveDeleteMode ? "#ff4444" : "#444";
+        renderSaveList();
+    }
+
+    function renderSaveList() {
+        let rawData = safeStorage.getItem('KPOP_LINE_SAVED_GROUPS');
+        let arrayData = rawData ? JSON.parse(rawData) : [];
+
+        // Box 3: saved list (load)
+        let target = document.getElementById('save-list-target');
+        if(arrayData.length === 0) {
+            target.innerHTML = `<div style="text-align:center;color:#444;font-size:10px;padding:12px;">NO SAVED GROUPS YET</div>`;
+        } else {
+            target.innerHTML = arrayData.map((item, index) => `
+                <div class="save-slot-card" onclick="handleSlotClick(${index})" style="cursor:pointer;">
+                    <div style="display:flex;flex-direction:column;gap:3px;pointer-events:none;">
+                        <span style="font-size:11px;color:#fff;font-weight:900;letter-spacing:1px;">${item.title}</span>
+                        <span style="font-size:9px;color:#555;">MEMBERS: ${item.members.length}</span>
+                    </div>
+                    <span style="color:#adff2f;font-size:11px;font-weight:900;pointer-events:none;">LOAD</span>
+                </div>
+            `).join('');
+        }
+
+        // Box 4: delete list
+        let dtarget = document.getElementById('delete-list-target');
+        if(arrayData.length === 0) {
+            dtarget.innerHTML = `<div style="text-align:center;color:#444;font-size:10px;padding:12px;">NOTHING TO DELETE</div>`;
+        } else {
+            dtarget.innerHTML = arrayData.map((item, index) => `
+                <div class="save-slot-card" onclick="handleDeleteClick(${index})" style="cursor:pointer; border-color:${saveDeleteMode?'#ff4444':'#222'};">
+                    <div style="display:flex;flex-direction:column;gap:3px;pointer-events:none;">
+                        <span style="font-size:11px;color:#fff;font-weight:900;letter-spacing:1px;">${item.title}</span>
+                        <span style="font-size:9px;color:#555;">MEMBERS: ${item.members.length}</span>
+                    </div>
+                    <span style="color:#ff4444;font-size:11px;font-weight:900;pointer-events:none;">${saveDeleteMode ? 'REMOVE' : '✕'}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    function handleSlotClick(index) {
+        let rawData = safeStorage.getItem('KPOP_LINE_SAVED_GROUPS');
+        let arrayData = rawData ? JSON.parse(rawData) : [];
+        if(!arrayData[index]) return;
+        let targetGroup = arrayData[index];
+        if(activeLoop) cancelAnimationFrame(activeLoop);
+        document.getElementById('title-input').value = targetGroup.title;
+        members = targetGroup.members.map((m, i) => ({ id: m.id, name: m.name, pos: m.pos || '', hotkey: m.hotkey || _defaultKey(i), color: m.color, img: m.img || "", time: m.time || 0, active: false, muted: false, adlib: false, posShown: m.time > 0, activeClipId: null }));
+        timelineClips = targetGroup.timeline || [];
+        buildViewportDOM();
+        buildDOMCache();
+        initChart();
+        updateLineSizes(currentLineHeight);
+        _applySdvState(false, true);
+        sdvVisible = false;
+        timelineClips.forEach(renderClipUI);
+        document.getElementById('setup').classList.add('hidden');
+        document.getElementById('save-manager-dialog').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('video-manual-bar').style.display = 'flex';
+        lastTime = performance.now();
+        loop();
+    }
+
+    function handleDeleteClick(index) {
+        let rawData = safeStorage.getItem('KPOP_LINE_SAVED_GROUPS');
+        let arrayData = rawData ? JSON.parse(rawData) : [];
+        if(!arrayData[index]) return;
+        showConfirm('DELETE "' + arrayData[index].title + '"?', () => {
+            arrayData.splice(index, 1);
+            safeStorage.setItem('KPOP_LINE_SAVED_GROUPS', JSON.stringify(arrayData));
+            renderSaveList();
+            renderPresetsOnSetup();
+        });
+    }
+
+    let sdvVisible = false;
+
+    function _applySdvState(show, instant) {
+        const chartWrap = document.getElementById('chart-container-wrap');
+        const spacer = document.getElementById('main-spacer');
+        const vpContainer = document.getElementById('viewport-container');
+        const btn = document.getElementById('sdv-toggle-btn');
+        const canvas = document.getElementById('distributionChart');
+        if (show) {
+            canvas.style.transition = instant ? 'none' : '';
+            canvas.style.opacity = '0';
+            chartWrap.classList.remove('sdv-hidden');
+            spacer.classList.remove('sdv-collapsed');
+            vpContainer.classList.remove('sdv-centered');
+            btn.classList.add('btn-toggle-on');
+            clearTimeout(canvas._sdvFadeTimer);
+            canvas._sdvFadeTimer = setTimeout(() => {
+                canvas.style.transition = 'opacity 0.3s ease';
+                canvas.style.opacity = '1';
+            }, instant ? 0 : 460);
+        } else {
+            clearTimeout(canvas._sdvFadeTimer);
+            canvas.style.transition = 'none';
+            canvas.style.opacity = '0';
+            chartWrap.classList.add('sdv-hidden');
+            spacer.classList.add('sdv-collapsed');
+            vpContainer.classList.add('sdv-centered');
+            btn.classList.remove('btn-toggle-on');
+        }
+    }
+
+    function toggleSDV(e) {
+        if(e) e.preventDefault();
+        sdvVisible = !sdvVisible;
+        _applySdvState(sdvVisible, false);
+    }
+      function toggleVocalPanels(e) {
+        if(e) e.preventDefault();
+        if(adlibPanelsMode) { toggleAdlibPanels(); }
+        vocalPanelsMode = !vocalPanelsMode;
+        const vpToggleBtn = document.getElementById('vocal-panel-toggle-btn');
+        const normalManuals = document.getElementById('video-manual-bar');
+        const dockInner = document.querySelector('.dock-inner');
+        const vocalContainer = document.getElementById('vocal-tap-panels-container');
+        if(vocalPanelsMode) {
+            vpToggleBtn.classList.add('btn-toggle-on');
+            // Hide all dock-inner children except the vocal container and the toggle btn
+            Array.from(dockInner.children).forEach(el => {
+                if (el !== vocalContainer && el !== vpToggleBtn) el.style.setProperty('display', 'none', 'important');
+            });
+            vpToggleBtn.style.setProperty('display', 'block', 'important');
+            buildVocalPanelsDOM();
+            vocalContainer.classList.remove('hidden');
+            vocalContainer.style.removeProperty('display');
+        } else {
+            vpToggleBtn.classList.remove('btn-toggle-on');
+            vocalContainer.classList.add('hidden');
+            Array.from(dockInner.children).forEach(el => { el.style.display = ''; });
+        }
+    }
+
+    function buildVocalPanelsDOM() {
+        const container = document.getElementById('vocal-tap-panels-container');
+        container.innerHTML = members.map(m => `<div class="vocal-member-panel ${m.active && !m.muted ? 'vp-active' : ''}" id="vp-panel-${m.id}" onpointerdown="handleVocalPanelTap(event, ${m.id})" style="--vp-color: ${m.color}"><div class="vp-name">${m.name}</div></div>`).join('');
+    }
+
+    function handleVocalPanelTap(e, id) {
+        e.preventDefault(); tgl(id);
+        let m = members.find(x => x.id === id);
+        if(!m) return;
+        const panelNode = document.getElementById(`vp-panel-${id}`);
+        if(panelNode) panelNode.classList.toggle('vp-active', m.active && !m.muted);
+    }
+
+    function toggleAdlibPanels(e) {
+        if(e) e.preventDefault();
+        if(vocalPanelsMode) { toggleVocalPanels(); }
+        adlibPanelsMode = !adlibPanelsMode;
+        const apToggleBtn = document.getElementById('adlib-panel-toggle-btn');
+        const dockInner = document.querySelector('.dock-inner');
+        const adlibContainer = document.getElementById('adlib-tap-panels-container');
+        if(adlibPanelsMode) {
+            apToggleBtn.classList.add('btn-toggle-on');
+            Array.from(dockInner.children).forEach(el => {
+                if (el !== adlibContainer && el !== apToggleBtn) el.style.setProperty('display', 'none', 'important');
+            });
+            apToggleBtn.style.setProperty('display', 'block', 'important');
+            buildAdlibPanelsDOM();
+            adlibContainer.classList.remove('hidden');
+            adlibContainer.style.removeProperty('display');
+        } else {
+            apToggleBtn.classList.remove('btn-toggle-on');
+            adlibContainer.classList.add('hidden');
+            Array.from(dockInner.children).forEach(el => { el.style.display = ''; });
+        }
+    }
+
+    function buildAdlibPanelsDOM() {
+        const container = document.getElementById('adlib-tap-panels-container');
+        container.innerHTML = members.map(m => `<div class="adlib-member-panel ${m.adlib ? 'ap-active' : ''}" id="ap-panel-${m.id}" onpointerdown="handleAdlibPanelTap(event, ${m.id})"><div class="vp-name">${m.name}</div></div>`).join('');
+    }
+
+    function handleAdlibPanelTap(e, id) {
+        e.preventDefault(); tglAdlib(id);
+        let m = members.find(x => x.id === id);
+        if(!m) return;
+        const panelNode = document.getElementById(`ap-panel-${id}`);
+        if(panelNode) panelNode.classList.toggle('ap-active', m.adlib);
+    }
+
+    // Toggle AD-LIB singing for a member: row glows yellow while active,
+    // and the recorded timeline block for this stretch is colored yellow.
+    function tglAdlib(id) {
+        let m = members.find(x => x.id === id);
+        if(!m || m.muted) return;
+        const row = document.getElementById(`row-${id}`);
+        const pos = document.getElementById(`pos-${id}`);
+        m.adlib = !m.adlib;
+        if (m.adlib) {
+            m.active = true;
+            row.classList.add('active');
+            row.style.setProperty('--m-color', ADLIB_COLOR);
+            if (!m.posShown) { pos.classList.add('pos-once'); m.posShown = true; }
+            const v = document.getElementById('bg-video');
+            const a = document.getElementById('bg-audio');
+            if (!v.src && !a.src && !isPlaying) { isPlaying = true; }
+            startRecording(m, true);
+        } else {
+            m.active = false;
+            row.classList.remove('active');
+            row.style.setProperty('--m-color', m.color);
+            stopRecording(m);
+        }
+        if(vocalPanelsMode) { const panelNode = document.getElementById(`vp-panel-${id}`); if(panelNode) panelNode.classList.toggle('vp-active', m.active && !m.muted); }
+    }
+
+    function handleFile(input, index) {
+        const file = input.files[0];
+        if (file) {
+            const row = input.closest('.mb-row');
+            const preview = row ? row.querySelector('.mb-photo-preview') : null;
+            const setPreview = (src) => {
+                if (!preview) return;
+                preview.style.backgroundImage = `url('${src}')`;
+                preview.classList.add('has-img');
+            };
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Resize/compress so photos take up only a few KB instead of MBs,
+                    // which is what was silently overflowing localStorage and losing saves.
+                    const maxDim = 240;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; } }
+                    else { if (h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; } }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    let compressed;
+                    try { compressed = canvas.toDataURL('image/jpeg', 0.75); }
+                    catch(err) { compressed = e.target.result; }
+                    input.setAttribute('data-img-src', compressed);
+                    input.previousElementSibling.innerText = "PHOTO ADDED";
+                    input.previousElementSibling.style.color = "#fff";
+                    setPreview(compressed);
+                };
+                img.onerror = function() {
+                    input.setAttribute('data-img-src', e.target.result);
+                    input.previousElementSibling.innerText = "PHOTO ADDED";
+                    input.previousElementSibling.style.color = "#fff";
+                    setPreview(e.target.result);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function toggleSort(e) {
+        if(e) e.preventDefault();
+        autoSort = !autoSort;
+        const btn = document.getElementById('sort-btn');
+        btn.innerText = `SORT: ${autoSort ? 'ON' : 'OFF'}`;
+        btn.classList.toggle('btn-toggle-on', autoSort);
+    }
+
+    function hexToHue(hex) {
+        hex = hex.replace('#','');
+        if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+        const r=parseInt(hex.slice(0,2),16)/255, g=parseInt(hex.slice(2,4),16)/255, b=parseInt(hex.slice(4,6),16)/255;
+        const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+        if(d===0) return 0;
+        let h = max===r ? ((g-b)/d)%6 : max===g ? (b-r)/d+2 : (r-g)/d+4;
+        return Math.round(h*60+360)%360;
+    }
+
+    function buildViewportDOM() {
+        pctRevealed = false;
+        keyBadgesVisible = false;
+        const vpEl = document.getElementById('viewport');
+        const vpContainerEl = document.getElementById('viewport-container');
+        vpEl.classList.toggle('two-col-mode', twoColumnMode);
+        if (vpContainerEl) vpContainerEl.classList.toggle('two-col-active', twoColumnMode);
+        vpEl.style.height = _viewportHeightFor(members.length) + 'px';
+        _applyTwoColPanelHeight();
+        vpEl.innerHTML = members.map(m => `
+            <div class="member-row" id="row-${m.id}" onpointerdown="tgl(${m.id})" style="--m-color: ${m.color}">
+                <div class="avatar-wrap">
+                    <div class="m-avatar" id="avatar-${m.id}" style="background-image: url('${m.img}')"></div>
+                    <span class="mic-icon" id="mic-${m.id}" onpointerdown="muteTgl(event, ${m.id})">${MIC_SVG}</span>
+                </div>
+                <div class="content-wrap">
+                    <div class="label-group">
+                        <div class="m-pos" id="pos-${m.id}">${m.pos}</div>
+                        <div class="label-row">
+                            <span class="m-name" id="name-${m.id}">${m.name}</span>
+                            ${m.hotkey ? `<span class="key-badge" id="keybadge-${m.id}">${m.hotkey}</span>` : ''}
+                            <div class="time-display" id="disp-${m.id}">
+                                <span id="box-${m.id}">0.0</span>
+                                <span class="m-pct" id="pct-${m.id}">0.0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill" id="bar-${m.id}" style="background-color: ${m.color};"></div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        document.getElementById('track-list').innerHTML = members.map(m => `<div class="track" id="track-${m.id}"><div class="track-label">${m.name}</div></div>`).join('');
+    }
+
+    function startEngine() {
+        // Cancel any lingering key-listen mode
+        if (_listeningRow) { _listeningRow.classList.remove('listening'); _listeningRow = null; }
+        const rows = document.querySelectorAll('#member-builder .mb-row');
+        members = Array.from(rows).map((row, i) => {
+            const nameEl = row.querySelector('.mb-name');
+            const colorEl = row.querySelector('.mb-color');
+            const keyBtn = row.querySelector('.mb-key-btn');
+            const imgEl = row.querySelector('.img-file');
+            return {
+                id: i,
+                name: (nameEl.value || `MEMBER ${i+1}`).toUpperCase(),
+                pos: '',
+                hotkey: (keyBtn && keyBtn.getAttribute('data-key')) || '',
+                color: colorEl.value,
+                img: imgEl.getAttribute('data-img-src') || '',
+                time: 0, active: false, muted: false, adlib: false, posShown: false, activeClipId: null
+            };
+        });
+        buildViewportDOM();
+        buildDOMCache();
+        initChart();
+        updateLineSizes(currentLineHeight);
+        _applySdvState(false, true);
+        document.getElementById('setup').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('video-manual-bar').style.display = 'flex';
+        lastTime = performance.now();
+        loop();
+    }
+
+    function muteTgl(e, id) {
+        e.stopPropagation(); 
+        let m = members.find(x => x.id === id);
+        if(!m) return;
+        m.muted = !m.muted;
+        if(m.active && m.muted) { m.active = false; stopRecording(m); }
+        if(m.adlib && m.muted) {
+            m.adlib = false;
+            row.style.setProperty('--m-color', m.color);
+            if(adlibPanelsMode) { const p = document.getElementById(`ap-panel-${id}`); if(p) p.classList.remove('ap-active'); }
+        }
+        const row = document.getElementById(`row-${id}`);
+        const mic = document.getElementById(`mic-${id}`);
+        row.classList.toggle('is-muted', m.muted);
+        mic.innerHTML = m.muted ? `<div class="custom-mute-icon"><div class="custom-mute-line"></div></div>` : MIC_SVG;
+        if(vocalPanelsMode) { const panelNode = document.getElementById(`vp-panel-${id}`); if(panelNode) panelNode.classList.remove('vp-active'); }
+    }
+
+    function tgl(id) {
+        let m = members.find(x => x.id === id);
+        if(!m || m.muted) return; 
+        const row = document.getElementById(`row-${id}`);
+        const pos = document.getElementById(`pos-${id}`);
+        m.active = !m.active; 
+        if (m.active) {
+            row.classList.add('active'); 
+            if (!m.posShown) { pos.classList.add('pos-once'); m.posShown = true; }
+            // Auto-start playhead if no media loaded
+            const v = document.getElementById('bg-video');
+            const a = document.getElementById('bg-audio');
+            if (!v.src && !a.src && !isPlaying) {
+                isPlaying = true;
+            }
+            startRecording(m);
+        } else {
+            row.classList.remove('active');
+            stopRecording(m);
+        }
+        if(vocalPanelsMode) { const panelNode = document.getElementById(`vp-panel-${id}`); if(panelNode) panelNode.classList.toggle('vp-active', m.active); }
+    }
+
+    function resetTimers(e) {
+        if(e) e.preventDefault();
+        members.forEach(m => {
+            m.time = 0; m.active = false; m.muted = false; m.posShown = false; m.adlib = false; m.activeClipId = null;
+            const mic = document.getElementById(`mic-${m.id}`); if(mic) mic.innerHTML = MIC_SVG;
+            const row = document.getElementById(`row-${m.id}`); if(row) row.style.setProperty('--m-color', m.color);
+        });
+        timelineClips = [];
+        document.querySelectorAll('.vocal-block').forEach(el => el.remove());
+        document.querySelectorAll('.member-row').forEach(r => r.classList.remove('active', 'has-data', 'is-muted'));
+        document.querySelectorAll('.m-pos').forEach(p => p.classList.remove('pos-once'));
+        playheadPx = 0;
+        const v = document.getElementById('bg-video');
+        const a = document.getElementById('bg-audio');
+        if(v.src) v.currentTime = 0;
+        if(a.src) a.currentTime = 0;
+        updatePlayheadUI();
+        if(vocalPanelsMode) buildVocalPanelsDOM();
+        if(adlibPanelsMode) buildAdlibPanelsDOM();
+    }
+
+    function wipeAll(e) {
+        if(e) e.preventDefault();
+        showConfirm("START A NEW REWORK?", () => {
+            // Cancel all active loops and state
+            if(activeLoop) { cancelAnimationFrame(activeLoop); activeLoop = null; }
+            isPlaying = false;
+            members = [];
+            timelineClips = [];
+            playheadPx = 0;
+            _domCache = {};
+      
+            // Reset video/audio
+            const v = document.getElementById('bg-video');
+            const a = document.getElementById('bg-audio');
+            v.pause(); v.removeAttribute('src'); v.load();
+            a.pause(); a.removeAttribute('src'); a.load();
+            document.getElementById('bg-video-container').style.display = 'none';
+            document.getElementById('vid-btn').classList.remove('btn-toggle-on');
+            document.getElementById('aud-btn').classList.remove('btn-toggle-on');
+
+            // Reset chart
+            if(myChart) { myChart.destroy(); myChart = null; }
+
+            // Reset timeline
+            document.getElementById('track-list').innerHTML = '';
+            document.getElementById('tl-content').querySelectorAll('.vocal-block').forEach(b => b.remove());
+            document.getElementById('timeline-wrapper').classList.add('timeline-hidden');
+            document.getElementById('tl-toggle-btn').style.borderColor = '#555';
+
+            // Reset viewport
+            document.getElementById('viewport').innerHTML = '';
+
+            // Reset vocal panels
+            vocalPanelsMode = false;
+            document.getElementById('vocal-tap-panels-container').classList.add('hidden');
+            document.getElementById('vocal-tap-panels-container').innerHTML = '';
+            document.getElementById('vocal-panel-toggle-btn').classList.remove('btn-toggle-on');
+
+            // Reset ad-lib panels
+            adlibPanelsMode = false;
+            document.getElementById('adlib-tap-panels-container').classList.add('hidden');
+            document.getElementById('adlib-tap-panels-container').innerHTML = '';
+            document.getElementById('adlib-panel-toggle-btn').classList.remove('btn-toggle-on');
+
+            // Reset SDV display toggle — off by default
+            sdvVisible = false;
+            document.getElementById('chart-container-wrap').classList.add('sdv-hidden');
+            document.getElementById('main-spacer').classList.add('sdv-collapsed');
+            document.getElementById('viewport-container').classList.add('sdv-centered');
+            document.getElementById('sdv-toggle-btn').classList.remove('btn-toggle-on');
+
+            // Reset title
+            document.getElementById('title-input').value = 'SONG TITLE HERE';
+
+            // Reset sort/max
+            autoSort = true;
+            showMax = false;
+            manualMax = 0;
+            document.getElementById('sort-btn').innerText = 'SORT: ON';
+            document.getElementById('sort-btn').classList.add('btn-toggle-on');
+            document.getElementById('max-btn').innerText = 'MAX: 0.0';
+            document.getElementById('max-btn').classList.remove('btn-toggle-on');
+
+            // Show setup with a fresh builder
+            const builder = document.getElementById('member-builder');
+            builder.innerHTML = '';
+            _mbCount = 0;
+            // Seed 6 default rows
+            for (let i = 0; i < 6; i++) addMemberRow();
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('video-manual-bar').style.display = 'none';
+            document.getElementById('setup').classList.remove('hidden');
+            document.getElementById('setup').classList.remove('hidden');
+            renderPresetsOnSetup();
+        });
+    }
+
+    // Custom confirm dialog (replaces window.confirm for Perchance compatibility)
+    function showConfirm(msg, onYes) {
+        let existing = document.getElementById('_custom-confirm');
+        if(existing) existing.remove();
+        const d = document.createElement('div');
+        d.id = '_custom-confirm';
+        d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;';
+        d.innerHTML = `<div style="font-size:13px;color:#fff;letter-spacing:2px;text-align:center;padding:0 30px;">${msg}</div>
+        <div style="display:flex;gap:12px;">
+            <button id="_confirm-yes" style="background:#adff2f;color:#000;border:none;padding:10px 28px;font-weight:900;font-size:11px;letter-spacing:2px;border-radius:4px;cursor:pointer;">YES</button>
+            <button id="_confirm-no" style="background:transparent;color:#fff;border:1px solid #555;padding:10px 28px;font-weight:900;font-size:11px;letter-spacing:2px;border-radius:4px;cursor:pointer;">CANCEL</button>
+        </div>`;
+        document.body.appendChild(d);
+        document.getElementById('_confirm-yes').onclick = () => { d.remove(); onYes(); };
+        document.getElementById('_confirm-no').onclick = () => d.remove();
+    }
+
+    // DOM cache - built once in buildViewportDOM
+    let _domCache = {};
+    function buildDOMCache() {
+        _domCache = {};
+        members.forEach(m => {
+            _domCache[m.id] = {
+                row:  document.getElementById(`row-${m.id}`),
+                box:  document.getElementById(`box-${m.id}`),
+                pct:  document.getElementById(`pct-${m.id}`),
+                bar:  document.getElementById(`bar-${m.id}`),
+                pos:  document.getElementById(`pos-${m.id}`)
+            };
+        });
+    }
+
+    function loop() {
+        let now = performance.now();
+        let dt = (now - lastTime) / 1000;
+        lastTime = now;
+        const v = document.getElementById('bg-video');
+        const a = document.getElementById('bg-audio');
+        if (v.src && !v.paused) playheadPx = v.currentTime * pxPerSec;
+        else if (a.src && !a.paused) playheadPx = a.currentTime * pxPerSec;
+        else if (isPlaying) playheadPx += dt * pxPerSec;
+        updatePlayheadUI();
+        let currentTimelineTime = playheadPx / pxPerSec;
+
+        // Clear passing-through only on blocks that had it
+        if (_passingBlocks.size) { _passingBlocks.forEach(el => el.classList.remove('passing-through')); _passingBlocks.clear(); }
+
+        let total = 0;
+        let borderTransitioning = false;
+        members.forEach(m => { 
+            let acc = 0;
+            let vocalizing = m.active;
+            let isAdlibActive = false;
+            for (let ci = 0; ci < timelineClips.length; ci++) {
+                const c = timelineClips[ci];
+                if (c.memberId !== m.id) continue;
+                const isLiveRecording = m.activeClipId === c.id;
+                if (currentTimelineTime >= c.start && currentTimelineTime <= (c.start + c.duration)) {
+                    vocalizing = true;
+                    const el = document.getElementById(c.id);
+                    if (el) { el.classList.add('passing-through'); _passingBlocks.add(el); }
+                }
+                if (c.isAdlib && ((currentTimelineTime >= c.start && currentTimelineTime <= (c.start + c.duration)) || (isLiveRecording && currentTimelineTime >= c.start))) {
+                    isAdlibActive = true;
+                }
+                if (currentTimelineTime >= c.start) {
+                    let dur = isLiveRecording
+                        ? Math.max(0, currentTimelineTime - c.start)
+                        : Math.min(c.duration, currentTimelineTime - c.start);
+                    if (isLiveRecording) {
+                        const el = document.getElementById(c.id);
+                        if (el) { let tw = playheadPx - (c.start * pxPerSec); el.style.width = tw + 'px'; el.style.display = tw > 0.05 ? 'flex' : 'none'; }
+                    }
+                    acc += Math.max(0, dur);
+                }
+            }
+            m.time = acc;
+            total += acc;
+            const d = _domCache[m.id]; if (!d) return;
+            const shouldBeActive = vocalizing && !m.muted;
+            if (shouldBeActive !== d.row.classList.contains('active')) {
+                if (shouldBeActive) d.row.classList.add('active'); else d.row.classList.remove('active');
+            }
+            // Loop-safe ad-lib glow: re-evaluated every frame from playhead position,
+            // so the yellow glow fires every time an ad-lib block passes through, on every replay.
+            const wantAdlibGlow = shouldBeActive && (isAdlibActive || m.adlib);
+            if (!window.adlibGlowProgress) window.adlibGlowProgress = {};
+            let ag = window.adlibGlowProgress[m.id] ?? 0;
+            if (wantAdlibGlow) {
+                ag = Math.min(1, ag + dt * 12); // fast fade in
+            } else {
+                ag = Math.max(0, ag - dt * 1.4); // ~0.7s smooth fade out
+            }
+            window.adlibGlowProgress[m.id] = ag;
+            if (ag > 0.001) {
+                const mc = m.color;
+                const r1=parseInt(mc.slice(1,3),16), g1=parseInt(mc.slice(3,5),16), b1=parseInt(mc.slice(5,7),16);
+                const blended = `rgb(${Math.round(r1+(255-r1)*ag)},${Math.round(g1+(230-g1)*ag)},${Math.round(b1+(0-b1)*ag)})`;
+                d.row.style.setProperty('--m-color', blended);
+            } else {
+                d.row.style.setProperty('--m-color', m.color);
+            }
+            // Smoothly lerp the pie-chart border color between white and yellow for ad-lib.
+            const targetBorder = wantAdlibGlow ? 1 : 0;
+            let bp = chartBorderProgress[m.id] ?? 0;
+            if (Math.abs(targetBorder - bp) > 0.01) {
+                bp += (targetBorder - bp) * Math.min(1, dt * 8);
+                chartBorderProgress[m.id] = bp;
+                borderTransitioning = true;
+            } else if (bp !== targetBorder) {
+                chartBorderProgress[m.id] = targetBorder;
+                borderTransitioning = true;
+            }
+        });
+
+        const safeTotal = total || 0.001;
+        let targetMax = showMax && manualMax > 0 ? manualMax : Math.max(...members.map(m => m.time), 0.1);
+        let displayOrder = autoSort ? [...members].sort((a, b) => b.time - a.time) : members;
+        // Timer and percentage are two independent springs, each easing toward its own target.
+        // Keeping them separate (rather than deriving % from the timer's lerped value) means a
+        // wobble in one — e.g. the % target shifting because someone else's time changed this frame —
+        // never gets reflected into the other's displayed digits.
+        if (!window._dispLerp) window._dispLerp = {};
+        if (!window._pctLerp) window._pctLerp = {};
+        const DISP_SPEED = 9; // spring speed for the timer countup
+        const PCT_SPEED = 6;  // spring speed for the percentage — slightly lazier so it settles instead of chasing every tiny timer tick
+        const _vpWidth = twoColumnMode ? document.getElementById('viewport').clientWidth : 0;
+        for (let i = 0; i < displayOrder.length; i++) {
+            const m = displayOrder[i];
+            const d = _domCache[m.id]; if (!d) continue;
+            const hasData = m.time > 0.001;
+            if (hasData !== d.row.classList.contains('has-data')) {
+                if (hasData) d.row.classList.add('has-data'); else d.row.classList.remove('has-data');
+            }
+
+            // Smooth lerped display value for satisfying countup
+            let disp = window._dispLerp[m.id] ?? m.time;
+            const delta = m.time - disp;
+            if (Math.abs(delta) > 0.002) {
+                disp += delta * Math.min(1, DISP_SPEED * dt);
+            } else {
+                disp = m.time;
+            }
+            window._dispLerp[m.id] = disp;
+
+            // Percentage eases toward its own target independently of the timer's disp value.
+            const targetPct = (m.time / safeTotal) * 100;
+            let pctDisp = window._pctLerp[m.id] ?? targetPct;
+            const pctDelta = targetPct - pctDisp;
+            if (Math.abs(pctDelta) > 0.01) {
+                pctDisp += pctDelta * Math.min(1, PCT_SPEED * dt);
+            } else {
+                pctDisp = targetPct;
+            }
+            window._pctLerp[m.id] = pctDisp;
+
+            const tStr = disp.toFixed(1);
+            if (d.box._last !== tStr) { d.box.innerText = tStr; d.box._last = tStr; }
+            const pStr = pctDisp.toFixed(1) + '%';
+            if (d.pct._last !== pStr) { d.pct.innerText = pStr; d.pct._last = pStr; }
+            const bwVal = Math.min((disp / targetMax) * 100, 100);
+            const bw = bwVal.toFixed(2) + '%';
+            if (d.bar._last !== bw) { d.bar.style.width = bw; d.bar._last = bw; }
+            const idx = autoSort ? i : m.id;
+            const { tx, ty } = _rowPosition(idx, displayOrder.length, _vpWidth);
+            if (d.row._lastY !== ty || d.row._lastX !== tx) {
+                d.row.style.transform = `translate3d(${tx}px,${ty}px,0)`;
+                d.row._lastY = ty; d.row._lastX = tx;
+            }
+            d.row.style.zIndex = d.row.classList.contains('active') ? '100' : autoSort ? String(members.length - i) : '1';
+        }
+
+        if (myChart) {
+            const lerpSpeed = 4.5;
+            let needsRedraw = false;
+            members.forEach(m => {
+                let d = chartDisplayData.find(x => x.id === m.id);
+                if (!d) { d = { id: m.id, name: m.name, color: m.color, disp: 0.001 }; chartDisplayData.push(d); }
+                const target = Math.max(0.001, m.time);
+                const delta = target - d.disp;
+                if (Math.abs(delta) > 0.0005) {
+                    d.disp += delta * Math.min(1, lerpSpeed * dt);
+                    needsRedraw = true;
+                } else if (d.disp !== target) {
+                    d.disp = target;
+                    needsRedraw = true;
+                }
+            });
+            const anySinging = members.some(m => m.active && !m.muted);
+            if (needsRedraw || anySinging || borderTransitioning) {
+                // Sort by real time — instant rank flip to match the rows
+                const sm = [...chartDisplayData].sort((a, b) => {
+                    const ma = members.find(x => x.id === a.id);
+                    const mb = members.find(x => x.id === b.id);
+                    return (mb ? mb.time : 0) - (ma ? ma.time : 0);
+                });
+                myChart.data.labels = sm.map(x => x.name);
+                myChart.data.datasets[0].data = sm.map(x => x.disp);
+                myChart.data.datasets[0].backgroundColor = sm.map(x => x.color);
+                myChart.update('none');
+            }
+        }
+
+        activeLoop = requestAnimationFrame(loop);
+    }
+    let _passingBlocks = new Set();
+
+    // ── SETUP: member builder ────────────────────────────────────────────────
+
+    let _mbCount = 0;
+    let _listeningRow = null; // which row is currently waiting for a keypress
+
+    function _defaultKey(rowIndex) {
+        if (rowIndex < 9) return String(rowIndex + 1);
+        if (rowIndex === 9) return '0';
+        return '';
+    }
+
+    function _getUsedKeys() {
+        return Array.from(document.querySelectorAll('.mb-key-btn[data-key]'))
+            .map(b => b.getAttribute('data-key')).filter(Boolean);
+    }
+
+    // Called when a key-bind button is clicked — enters or exits listening mode
+    function _keyBtnClick(btn) {
+        if (_listeningRow === btn) {
+            // Cancel listening
+            _listeningRow = null;
+            btn.classList.remove('listening');
+            const k = btn.getAttribute('data-key');
+            btn.textContent = k || '—';
+            if (k) btn.classList.add('key-set'); else btn.classList.remove('key-set');
+            return;
+        }
+        // Cancel any previous listener
+        if (_listeningRow) {
+            _listeningRow.classList.remove('listening');
+            const pk = _listeningRow.getAttribute('data-key');
+            _listeningRow.textContent = pk || '—';
+            if (pk) _listeningRow.classList.add('key-set'); else _listeningRow.classList.remove('key-set');
+        }
+        _listeningRow = btn;
+        btn.classList.add('listening');
+        btn.textContent = '...';
+    }
+
+    // Global keydown for setup key capture — fires before the member tgl handler
+    document.addEventListener('keydown', function _setupKeyCapture(e) {
+        if (!_listeningRow) return;
+        // Only capture printable single characters (letters, digits)
+        if (e.key.length !== 1) return;
+        const k = e.key.toUpperCase();
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        const used = _getUsedKeys();
+        if (used.includes(k) && _listeningRow.getAttribute('data-key') !== k) {
+            // Flash red to signal conflict
+            _listeningRow.style.background = '#ff4444';
+            _listeningRow.style.color = '#fff';
+            _listeningRow.textContent = 'TAKEN';
+            setTimeout(() => {
+                if (_listeningRow) {
+                    _listeningRow.style.background = '';
+                    _listeningRow.style.color = '';
+                    _listeningRow.textContent = '...';
+                }
+            }, 700);
+            return;
+        }
+
+        _listeningRow.setAttribute('data-key', k);
+        _listeningRow.classList.remove('listening');
+        _listeningRow.classList.add('key-set');
+        _listeningRow.textContent = k;
+        _listeningRow.style.background = '';
+        _listeningRow.style.color = '';
+        _listeningRow = null;
+    }, true /* capture — runs before other keydown listeners */);
+
+    function addMemberRow(colorOverride, nameVal, keyVal) {
+        const container = document.getElementById('member-builder');
+        const index = container.children.length;
+        const color = colorOverride || crystalColors[index % crystalColors.length];
+        const defaultKey = keyVal !== undefined ? keyVal : _defaultKey(index);
+        const uid = _mbCount++;
+
+        const row = document.createElement('div');
+        row.className = 'mb-row';
+        row.dataset.uid = uid;
+
+        const keyHasValue = !!defaultKey;
+        row.innerHTML = `
+            <input type="color" class="mb-color" value="${color}">
+            <div class="mb-photo-preview" title="Click to add/change photo"></div>
+            <input type="text" class="mb-name" placeholder="NAME" value="${nameVal || ''}" spellcheck="false" autocomplete="off">
+            <button type="button" class="mb-key-btn ${keyHasValue ? 'key-set' : ''}" data-key="${defaultKey}" onclick="_keyBtnClick(this)" title="Click then press a key to bind">${defaultKey || '—'}</button>
+            <label class="mb-photo-btn" title="Add photo">📷 PHOTO</label>
+            <input type="file" accept="image/*" class="img-file" style="display:none;" onchange="handleFile(this, ${uid})">
+        `;
+        row.querySelector('.mb-photo-btn').onclick = () => row.querySelector('.img-file').click();
+        row.querySelector('.mb-photo-preview').onclick = () => row.querySelector('.img-file').click();
+        container.appendChild(row);
+    }
+
+    function removeMemberRow() {
+        const container = document.getElementById('member-builder');
+        if (container.children.length > 1) {
+            const last = container.lastElementChild;
+            // Cancel listening if this row was active
+            const btn = last.querySelector('.mb-key-btn');
+            if (btn && _listeningRow === btn) _listeningRow = null;
+            container.removeChild(last);
+        }
+    }
+
+    function nextStep() {
+        // Legacy – no-op
+    }
+
+    // Fast native pointer-event drag & resize for vocal blocks
+    const RESIZE_EDGE_PX = 14; // px from left/right edge = resize handle
+    let _activeDrag = null;
+
+    document.addEventListener('pointerdown', function(e) {
+        const block = e.target.closest('.vocal-block');
+        if (!block) return;
+        e.stopPropagation();
+        e.preventDefault();
+
+        const clip = timelineClips.find(c => c.id === block.id);
+        if (!clip) return;
+
+      block.setPointerCapture(e.pointerId);
+        block.classList.add('dragging');
+
+        const rect = block.getBoundingClientRect();
+        const localX = e.clientX - rect.left;
+        const blockW = rect.width;
+        let mode = 'move';
+        if (localX <= RESIZE_EDGE_PX) mode = 'resize-left';
+        else if (localX >= blockW - RESIZE_EDGE_PX) mode = 'resize-right';
+
+        const startClientX = e.clientX;
+        const startClipStart = clip.start;
+        const startClipDur = clip.duration;
+        const startBlockX = clip.start * pxPerSec;
+
+        _activeDrag = { block, clip, mode, startClientX, startClipStart, startClipDur, startBlockX };
+    }, { passive: false, capture: true });
+
+    document.addEventListener('pointermove', function(e) {
+        if (!_activeDrag) return;
+        e.preventDefault();
+        const { block, clip, mode, startClientX, startClipStart, startClipDur, startBlockX } = _activeDrag;
+        const dx = e.clientX - startClientX;
+
+        if (mode === 'move') {
+            let newX = Math.max(0, startBlockX + dx);
+            clip.start = newX / pxPerSec;
+            block.style.transform = `translateX(${newX}px)`;
+            block.setAttribute('data-x', newX);
+        } else if (mode === 'resize-right') {
+            let newDur = Math.max(0.05, startClipDur + dx / pxPerSec);
+            clip.duration = newDur;
+            block.style.width = (newDur * pxPerSec) + 'px';
+        } else if (mode === 'resize-left') {
+            let deltaT = dx / pxPerSec;
+            let newStart = Math.max(0, startClipStart + deltaT);
+            let newDur = Math.max(0.05, startClipDur - (newStart - startClipStart));
+            clip.start = newStart;
+            clip.duration = newDur;
+            let newX = newStart * pxPerSec;
+            block.style.transform = `translateX(${newX}px)`;
+            block.setAttribute('data-x', newX);
+            block.style.width = (newDur * pxPerSec) + 'px';
+        }
+    }, { passive: false, capture: true });
+
+    document.addEventListener('pointerup', function(e) {
+        if (!_activeDrag) return;
+        _activeDrag.block.classList.remove('dragging');
+        _activeDrag = null;
+    }, { capture: true });
+
+    // Right-click to delete block
+    document.addEventListener('contextmenu', function(e) {
+        const block = e.target.closest('.vocal-block');
+        if (!block) return;
+        e.preventDefault();
+        timelineClips = timelineClips.filter(c => c.id !== block.id);
+        block.remove();
+    }, { capture: true });
+
+</script>
+</body>
+</html>
